@@ -8,20 +8,11 @@
   <meta name="apple-mobile-web-app-title" content="毛孩日誌" />
   <meta name="theme-color" content="#fdfaf6" />
   <title>毛孩日誌 · Cat Health Tracker</title>
-  <link rel="stylesheet" href="styles/main.css" />
   <!-- PWA manifest for "Add to Home Screen" -->
   <link rel="manifest" href="manifest.json" />
 </head>
 <body>
   <div id="root"></div>
-  <script type="module">
-    import { createElement } from 'https://esm.sh/react@18';
-    import { createRoot }    from 'https://esm.sh/react-dom@18/client';
-    import App from './App.jsx';
-
-    // Polyfill JSX for native ES modules (Babel not needed with esm.sh)
-    // Note: for production, run `npm run build` via vite instead.
-    createRoot(document.getElementById('root')).render(createElement(App));
-  </script>
+  <script type="module" src="/main.jsx"></script>
 </body>
 </html>
