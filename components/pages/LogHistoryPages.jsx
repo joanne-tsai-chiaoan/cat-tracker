@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { fmtTime } from "../../utils.js";
-import { Lightbox, ConfirmDelete } from "../ui/index.jsx";
+import { Lightbox, ConfirmDelete, DriveImg } from "../ui/index.jsx";
+import { getPhotoUrl } from "../../storage.js";
 
 // ── LogPage ───────────────────────────────────────────────────────────────────
 export function LogPage({ t, todayLogs, todayKcal, todayWater, todayProtein, onDelete }) {
@@ -88,7 +89,7 @@ function MealCardBody({ log, t, onPhotoClick }) {
       )}
 
       {log.note && <div className="log-note">💬 {log.note}</div>}
-      <PhotoStrip photos={log.photos} onPhotoClick={onPhotoClick} />
+      <PhotoStrip log={log} onPhotoClick={onPhotoClick} />
     </>
   );
 }
@@ -142,18 +143,27 @@ function WasteCardBody({ log, t, onPhotoClick }) {
       )}
 
       {log.note && <div className="log-note">💬 {log.note}</div>}
-      <PhotoStrip photos={log.photos} onPhotoClick={onPhotoClick} />
+      <PhotoStrip log={log} onPhotoClick={onPhotoClick} />
     </>
   );
 }
 
-function PhotoStrip({ photos, onPhotoClick }) {
-  if (!photos?.length) return null;
+function PhotoStrip({ log, onPhotoClick }) {
+  // Support both old (photos: [dataUrl]) and new (photoIds: [driveRef]) formats
+  const refs = log.photoIds || log.photos || [];
+  if (!refs.length) return null;
+
+  const handleClick = (ref) => {
+    // Resolve to a displayable URL before opening lightbox
+    if (ref.startsWith("data:")) { onPhotoClick(ref); return; }
+    getPhotoUrl(ref).then(url => { if (url) onPhotoClick(url); });
+  };
+
   return (
     <div className="log-photos">
-      {photos.map((p, i) => (
-        <img key={i} src={p} alt="" className="log-photo"
-          onClick={() => onPhotoClick(p)} />
+      {refs.map((ref, i) => (
+        <DriveImg key={i} photoRef={ref} className="log-photo"
+          onClick={() => handleClick(ref)} />
       ))}
     </div>
   );

@@ -81,6 +81,17 @@ body {
 }
 .lang-toggle:active { background: var(--caramel); color: white; }
 
+.drive-btn {
+  background: var(--latte); border: none; cursor: pointer;
+  border-radius: 100px; padding: 5px 10px;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+  color: var(--mocha); transition: all .18s;
+}
+.drive-btn--ok    { color: #2a7a2a; }
+.drive-btn--error { color: #b04040; }
+.drive-btn--syncing { animation: spin .8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* Today summary chips */
 .today-summary { display: flex; gap: 8px; margin-top: 12px; }
 .today-chip {
@@ -209,6 +220,12 @@ body {
   border-radius: 12px; object-fit: cover;
   border: 2px solid var(--latte); cursor: pointer;
 }
+.photo-placeholder {
+  width: 70px; height: 70px;
+  border-radius: 12px; background: var(--latte);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
 
 .log-footer {
   display: flex; align-items: center; gap: 8px;

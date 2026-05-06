@@ -1,14 +1,16 @@
 // App.jsx — top-level state, routing, modal orchestration
-// All storage calls go through storage.js — swap that file to migrate to Google Drive
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { LANGS } from "./i18n.js";
 import { uid, today } from "./utils.js";
 import { SAMPLE_FOODS } from "./constants.js";
 import {
   loadLang, loadProfile, loadFoods, loadLogs,
   saveLang, saveProfile, saveFoods, saveLogs,
+  syncFromDrive, syncToDrive,
 } from "./storage.js";
+import { isSignedIn, signIn, signOut, onTokenChange } from "./auth.js";
+import { uploadPhoto } from "./drive.js";
 
 import { LogPage, HistoryPage }     from "./components/pages/LogHistoryPages.jsx";
 import { StatsPage, FoodDbPage }    from "./components/pages/StatsAndFoodPages.jsx";
@@ -20,26 +22,89 @@ import { AddFoodModal, ProfileModal }   from "./components/modals/FoodProfileMod
 const SEEDED_FOODS = SAMPLE_FOODS.map(f => ({ ...f, id: uid() }));
 
 export default function App() {
-  const [lang,    setLang]    = useState(() => loadLang());
-  const [profile, setProfile] = useState(() => loadProfile());
-  const [foods,   setFoods]   = useState(() => loadFoods(SEEDED_FOODS));
-  const [logs,    setLogs]    = useState(() => loadLogs());
-  const [tab,     setTab]     = useState("log");
-  const [modal,   setModal]   = useState(null);
-  // modal values: null | "addMeal" | "addWater" | "addWaste"
-  //             | "addFood" | { type:"editFood", food } | "profile"
+  const [lang,       setLang]       = useState(() => loadLang());
+  const [profile,    setProfile]    = useState(() => loadProfile());
+  const [foods,      setFoods]      = useState(() => loadFoods(SEEDED_FOODS));
+  const [logs,       setLogs]       = useState(() => loadLogs());
+  const [tab,        setTab]        = useState("log");
+  const [modal,      setModal]      = useState(null);
+  const [syncStatus, setSyncStatus] = useState(() => isSignedIn() ? "syncing" : "idle");
+  // syncStatus: "idle" | "syncing" | "ok" | "error"
 
-  const t = LANGS[lang];
+  const t        = LANGS[lang];
+  const stateRef = useRef(null);
+  const syncTimer = useRef(null);
 
-  // ── Persist on change ──
-  useEffect(() => { saveLang(lang); },    [lang]);
+  // Keep a ref to latest state for the debounced Drive push
+  useEffect(() => { stateRef.current = { lang, profile, foods, logs }; });
+
+  // ── Persist to localStorage on change ──
+  useEffect(() => { saveLang(lang); },       [lang]);
   useEffect(() => { saveProfile(profile); }, [profile]);
-  useEffect(() => { saveFoods(foods); },  [foods]);
-  useEffect(() => { saveLogs(logs); },    [logs]);
+  useEffect(() => { saveFoods(foods); },     [foods]);
+  useEffect(() => { saveLogs(logs); },       [logs]);
+
+  // ── Initial Drive pull (if already signed in from a previous session) ──
+  useEffect(() => {
+    if (!isSignedIn()) return;
+    syncFromDrive().then(data => {
+      if (data) {
+        if (data.lang)    setLang(data.lang);
+        if (data.profile) setProfile(data.profile);
+        if (data.foods)   setFoods(data.foods);
+        if (data.logs)    setLogs(data.logs);
+      }
+      setSyncStatus("ok");
+    }).catch(() => setSyncStatus("error"));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Listen for sign-in / sign-out ──
+  useEffect(() => {
+    return onTokenChange(async (token) => {
+      if (!token) { setSyncStatus("idle"); return; }
+      setSyncStatus("syncing");
+      try {
+        const data = await syncFromDrive();
+        if (data) {
+          if (data.lang)    setLang(data.lang);
+          if (data.profile) setProfile(data.profile);
+          if (data.foods)   setFoods(data.foods);
+          if (data.logs)    setLogs(data.logs);
+        }
+        setSyncStatus("ok");
+      } catch { setSyncStatus("error"); }
+    });
+  }, []);
+
+  // ── Debounced Drive push after any state change ──
+  useEffect(() => {
+    if (!isSignedIn()) return;
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => {
+      if (stateRef.current) syncToDrive(stateRef.current);
+    }, 3000);
+  }, [lang, profile, foods, logs]);
 
   // ── Log mutations ──
-  const addLog    = (entry) => setLogs(prev => [{ ...entry, id: uid(), createdAt: new Date().toISOString() }, ...prev]);
-  const deleteLog = (id)    => setLogs(prev => prev.filter(l => l.id !== id));
+  const addLog = (entry) => {
+    const logEntry = { ...entry, id: uid(), createdAt: new Date().toISOString() };
+    setLogs(prev => [logEntry, ...prev]);
+
+    // Upload photos to Drive in background; replace data URLs with Drive file IDs
+    if (isSignedIn() && entry.photos?.length) {
+      Promise.all(
+        entry.photos.map(dataUrl => uploadPhoto(dataUrl).catch(() => dataUrl))
+      ).then(photoIds => {
+        setLogs(prev => prev.map(l =>
+          l.id === logEntry.id
+            ? { ...l, photos: undefined, photoIds: photoIds.map(id => id.startsWith("data:") ? id : `drive:${id}`) }
+            : l
+        ));
+      });
+    }
+  };
+
+  const deleteLog = (id) => setLogs(prev => prev.filter(l => l.id !== id));
 
   // ── Food mutations ──
   const addFood    = (food) => setFoods(prev => [{ ...food, id: uid() }, ...prev]);
@@ -71,6 +136,16 @@ export default function App() {
           </div>
           <button className="lang-toggle" onClick={() => setLang(l => l === "zh" ? "en" : "zh")}>
             {lang === "zh" ? "EN" : "中"}
+          </button>
+          <button
+            className={`drive-btn drive-btn--${syncStatus}`}
+            title={syncStatus === "idle" ? "連結 Google Drive" : syncStatus === "syncing" ? "同步中…" : syncStatus === "ok" ? "已同步 — 點擊登出" : "同步失敗"}
+            onClick={() => {
+              if (isSignedIn()) { signOut(); setSyncStatus("idle"); }
+              else { setSyncStatus("syncing"); signIn(); }
+            }}
+          >
+            {syncStatus === "syncing" ? "↻" : syncStatus === "ok" ? "☁✓" : syncStatus === "error" ? "☁!" : "☁"}
           </button>
         </div>
 

@@ -1,7 +1,24 @@
 // components/ui/index.jsx — shared UI primitives
 
-import { useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { readFileAsDataUrl } from "../../utils.js";
+import { getPhotoUrl } from "../../storage.js";
+
+// ── DriveImg ──────────────────────────────────────────────────────────────────
+// Renders a photo from either a data URL (local) or a Drive file reference.
+// Shows a grey placeholder while loading.
+export function DriveImg({ photoRef, className, onClick }) {
+  const [src, setSrc] = useState(() => photoRef?.startsWith("data:") ? photoRef : null);
+
+  useEffect(() => {
+    if (!photoRef || photoRef.startsWith("data:")) return;
+    setSrc(null);
+    getPhotoUrl(photoRef).then(url => setSrc(url || null));
+  }, [photoRef]);
+
+  if (!src) return <div className={`photo-placeholder${className ? " " + className : ""}`} />;
+  return <img src={src} alt="" className={className} onClick={onClick} />;
+}
 
 // ── PhotoPicker ───────────────────────────────────────────────────────────────
 export function PhotoPicker({ photos, onChange, label }) {
