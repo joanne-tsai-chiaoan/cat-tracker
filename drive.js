@@ -1,5 +1,4 @@
 // Google Drive appDataFolder helpers
-// JSON data + individual photo files, all in the hidden app folder.
 
 import { getToken } from "./auth.js";
 
@@ -11,53 +10,74 @@ const auth = () => ({ Authorization: `Bearer ${getToken()}` });
 
 async function findId(name) {
   const q = encodeURIComponent(`name='${name}'`);
-  const res = await fetch(
-    `${API}/files?spaces=appDataFolder&q=${q}&fields=files(id)`,
-    { headers: auth() }
-  );
-  if (!res.ok) return null;
+  const url = `${API}/files?spaces=appDataFolder&q=${q}&fields=files(id)`;
+  console.log("[drive] findId →", name);
+  const res = await fetch(url, { headers: auth() });
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("[drive] findId failed", res.status, text);
+    return null;
+  }
   const { files } = await res.json();
+  console.log("[drive] findId result:", files?.length ?? 0, "files");
   return files?.[0]?.id ?? null;
 }
 
 // ── data.json ─────────────────────────────────────────────────────────────────
 
 export async function readDriveData() {
+  console.log("[drive] readDriveData start");
   const id = await findId(FILE);
-  if (!id) return null;
+  if (!id) { console.log("[drive] no data file yet"); return null; }
   const res = await fetch(`${API}/files/${id}?alt=media`, { headers: auth() });
-  return res.ok ? res.json() : null;
+  if (!res.ok) {
+    console.error("[drive] readDriveData fetch failed", res.status, await res.text());
+    return null;
+  }
+  const data = await res.json();
+  console.log("[drive] readDriveData OK — logs:", data.logs?.length ?? 0);
+  return data;
 }
 
 export async function writeDriveData(data) {
+  console.log("[drive] writeDriveData start — logs:", data.logs?.length ?? 0);
   const body = JSON.stringify(data);
   const id   = await findId(FILE);
 
+  let res;
   if (id) {
-    await fetch(`${UPLOAD}/files/${id}?uploadType=media`, {
+    console.log("[drive] PATCH existing file", id);
+    res = await fetch(`${UPLOAD}/files/${id}?uploadType=media`, {
       method:  "PATCH",
       headers: { ...auth(), "Content-Type": "application/json" },
       body,
     });
   } else {
+    console.log("[drive] POST new file");
     const form = new FormData();
     form.append("metadata", new Blob(
       [JSON.stringify({ name: FILE, parents: ["appDataFolder"] })],
       { type: "application/json" }
     ));
     form.append("file", new Blob([body], { type: "application/json" }));
-    await fetch(`${UPLOAD}/files?uploadType=multipart`, {
+    res = await fetch(`${UPLOAD}/files?uploadType=multipart`, {
       method:  "POST",
       headers: auth(),
       body:    form,
     });
   }
+
+  if (!res.ok) {
+    console.error("[drive] writeDriveData failed", res.status, await res.text());
+    throw new Error(`writeDriveData ${res.status}`);
+  }
+  console.log("[drive] writeDriveData OK");
 }
 
 // ── Photos ────────────────────────────────────────────────────────────────────
 
-// Upload a data URL → returns Drive file ID
 export async function uploadPhoto(dataUrl) {
+  console.log("[drive] uploadPhoto start, size:", Math.round(dataUrl.length / 1024), "KB");
   const blob     = await (await fetch(dataUrl)).blob();
   const mimeType = blob.type || "image/jpeg";
   const ext      = mimeType.includes("png") ? "png" : "jpg";
@@ -75,14 +95,22 @@ export async function uploadPhoto(dataUrl) {
     headers: auth(),
     body:    form,
   });
-  if (!res.ok) throw new Error(`Photo upload failed: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("[drive] uploadPhoto failed", res.status, text);
+    throw new Error(`uploadPhoto ${res.status}`);
+  }
   const { id } = await res.json();
+  console.log("[drive] uploadPhoto OK →", id);
   return id;
 }
 
-// Fetch a Drive file → returns a blob URL (caller must revoke when done)
 export async function fetchPhotoBlob(driveFileId) {
+  console.log("[drive] fetchPhotoBlob →", driveFileId);
   const res = await fetch(`${API}/files/${driveFileId}?alt=media`, { headers: auth() });
-  if (!res.ok) throw new Error(`Photo fetch failed: ${res.status}`);
+  if (!res.ok) {
+    console.error("[drive] fetchPhotoBlob failed", res.status);
+    throw new Error(`fetchPhotoBlob ${res.status}`);
+  }
   return URL.createObjectURL(await res.blob());
 }

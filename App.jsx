@@ -47,15 +47,20 @@ export default function App() {
   // ── Initial Drive pull (if already signed in from a previous session) ──
   useEffect(() => {
     if (!isSignedIn()) return;
+    console.log("[app] already signed in — pulling from Drive");
     syncFromDrive().then(data => {
       if (data) {
         if (data.lang)    setLang(data.lang);
         if (data.profile) setProfile(data.profile);
         if (data.foods)   setFoods(data.foods);
         if (data.logs)    setLogs(data.logs);
+      } else {
+        // No Drive file yet — push local data now
+        console.log("[app] no Drive file, pushing local data");
+        if (stateRef.current) syncToDrive(stateRef.current);
       }
       setSyncStatus("ok");
-    }).catch(() => setSyncStatus("error"));
+    }).catch((e) => { console.error("[app] initial pull failed", e); setSyncStatus("error"); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Listen for sign-in / sign-out ──
@@ -63,6 +68,7 @@ export default function App() {
     return onTokenChange(async (token) => {
       if (!token) { setSyncStatus("idle"); return; }
       setSyncStatus("syncing");
+      console.log("[app] token received — pulling from Drive");
       try {
         const data = await syncFromDrive();
         if (data) {
@@ -70,9 +76,13 @@ export default function App() {
           if (data.profile) setProfile(data.profile);
           if (data.foods)   setFoods(data.foods);
           if (data.logs)    setLogs(data.logs);
+        } else {
+          // First-ever sign-in — push local data immediately
+          console.log("[app] first sign-in, pushing local data to Drive");
+          if (stateRef.current) await syncToDrive(stateRef.current);
         }
         setSyncStatus("ok");
-      } catch { setSyncStatus("error"); }
+      } catch (e) { console.error("[app] sync failed", e); setSyncStatus("error"); }
     });
   }, []);
 
