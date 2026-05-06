@@ -1,6 +1,7 @@
-// components/modals/AddFoodModal.jsx
+// components/modals/AddFoodModal.jsx + ProfileModal.jsx
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { readFileAsDataUrl } from "../../utils.js";
 
 export function AddFoodModal({ t, initial, onSave, onClose }) {
   const [form, setForm] = useState(initial || {
@@ -100,10 +101,7 @@ export function AddFoodModal({ t, initial, onSave, onClose }) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// components/modals/ProfileModal.jsx
-
-import { useState, useRef } from "react";
-import { readFileAsDataUrl } from "../../utils.js";
+// ProfileModal
 
 export function ProfileModal({ t, profile, onSave, onClose }) {
   const [form, setForm] = useState(profile);

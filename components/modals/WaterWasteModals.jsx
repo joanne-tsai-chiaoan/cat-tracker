@@ -58,10 +58,8 @@ export function AddWaterModal({ t, onSave, onClose }) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// components/modals/AddWasteModal.jsx
+// AddWasteModal
 
-import { useState } from "react";
-import { today } from "../../utils.js";
 import { PhotoPicker } from "../ui/index.jsx";
 
 export function AddWasteModal({ t, onSave, onClose }) {
