@@ -161,8 +161,14 @@ body {
   color: var(--mocha); transition: all .18s;
   box-shadow: 0 2px 10px var(--shadow);
 }
-.action-btn:active { transform: scale(.96); background: var(--latte); }
+.action-btn:active { transform: scale(.96); }
 .action-btn .action-icon { font-size: 26px; }
+.action-btn--meal  { background: rgba(184,130,74,.10); border-color: var(--caramel-light); }
+.action-btn--water { background: rgba(122,174,196,.12); border-color: var(--sky-light); }
+.action-btn--waste { background: rgba(138,158,126,.12); border-color: #c8e8c0; }
+.action-btn--meal:active  { background: rgba(184,130,74,.20); }
+.action-btn--water:active { background: rgba(122,174,196,.22); }
+.action-btn--waste:active { background: rgba(138,158,126,.22); }
 
 /* ── Log entry cards ── */
 .log-card {
@@ -170,7 +176,7 @@ body {
   border-radius: var(--radius); padding: 11px 11px 11px 14px;
   box-shadow: 0 2px 12px var(--shadow);
   margin-bottom: 8px;
-  border-left: 3px solid transparent;
+  border-left: 4px solid transparent;
   position: relative;
 }
 .log-card.kind-meal   { border-left-color: var(--caramel-light); }
@@ -315,11 +321,12 @@ body {
 .food-db-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 0; border-bottom: 1px solid var(--latte);
+  cursor: pointer; user-select: none;
 }
 .food-db-row:last-child { border-bottom: none; }
 .food-db-info { flex: 1; min-width: 0; }
 .food-db-name { font-size: 14px; font-weight: 600; }
-.food-db-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.food-db-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .food-db-sub { font-size: 11px; color: var(--caramel); margin-top: 3px; font-weight: 600; }
 
 /* ── FAB ── */

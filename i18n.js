@@ -6,7 +6,7 @@ export const LANGS = {
 
     log: {
       title: "今天的紀錄", sub: "Today's Log",
-      addMeal: "新增一餐", addWater: "喝水紀錄", addWaste: "排泄紀錄",
+      addMeal: "餐食", addWater: "喝水", addWaste: "排泄",
       mealType: "餐別",
       mealTypes: { breakfast: "早餐", lunch: "午餐", dinner: "晚餐", snack: "點心", other: "其他" },
       addFood: "加入糧食",
@@ -115,7 +115,7 @@ export const LANGS = {
 
     log: {
       title: "Today's Log", sub: "Daily Record",
-      addMeal: "Add Meal", addWater: "Log Water", addWaste: "Log Waste",
+      addMeal: "Meal", addWater: "Water", addWaste: "Waste",
       mealType: "Meal Type",
       mealTypes: { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack", other: "Other" },
       addFood: "Add Food",
