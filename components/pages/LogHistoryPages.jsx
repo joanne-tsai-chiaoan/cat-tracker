@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { fmtTime } from "../../utils.js";
-import { Lightbox, ConfirmDelete, DriveImg } from "../ui/index.jsx";
+import { Lightbox, DriveImg } from "../ui/index.jsx";
 import { getPhotoUrl } from "../../storage.js";
 
 // ── LogPage ───────────────────────────────────────────────────────────────────
