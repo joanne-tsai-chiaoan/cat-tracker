@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { last7Days, fmtWeekday } from "../../utils.js";
 import { TYPE_COLORS, POOP_CONSISTENCY_COLORS, POOP_COLORS, CHART_PALETTE } from "../../constants.js";
-import { PieChart, WeeklyBarChart, SectionHeader, EmptyState, TabSelector, TypeBadge } from "../ui/index.jsx";
+import { PieChart, WeeklyBarChart, SectionHeader, EmptyState, TabSelector, TypeBadge, ActionSheet, useLongPress } from "../ui/index.jsx";
 
 // ── StatsPage ─────────────────────────────────────────────────────────────────
 export function StatsPage({ t, logs, foods }) {
@@ -191,9 +191,9 @@ function EmptyChart() {
 }
 
 // ── FoodDbPage ────────────────────────────────────────────────────────────────
-export function FoodDbPage({ t, foods, onAdd, onEdit }) {
+export function FoodDbPage({ t, foods, onAdd, onEdit, onDelete }) {
   const [search,     setSearch]     = useState("");
-  const [expandedId, setExpandedId] = useState(null);
+  const [detailFood, setDetailFood] = useState(null);
   const tf = t.foodDb;
 
   const filtered = foods.filter(f =>
@@ -223,37 +223,110 @@ export function FoodDbPage({ t, foods, onAdd, onEdit }) {
             <div className="food-type-header">
               <TypeBadge type={type} label={tf.types[type]} />
             </div>
-            {grouped[type].map(food => {
-              const isOpen = expandedId === food.id;
-              return (
-                <div key={food.id}
-                  className={`food-db-row${isOpen ? " food-db-row--open" : ""}`}
-                  onClick={() => setExpandedId(isOpen ? null : food.id)}>
-                  <div className="food-db-info">
-                    <div className="food-db-name">{food.name}</div>
-                    <div className="food-db-meta">
-                      {food.brand && `${food.brand} · `}
-                      {food.kcalPer100g} kcal · {food.proteinPer100g}g protein · 💧{food.waterPer100g}%
-                      <span> {tf.perHundred}</span>
-                    </div>
-                    {food.subtype && (
-                      <div className="food-db-sub">
-                        {tf.subtypes[food.type]?.[food.subtype] || food.subtype}
-                      </div>
-                    )}
-                  </div>
-                  {isOpen && (
-                    <button className="food-db-edit-btn"
-                      onClick={e => { e.stopPropagation(); onEdit(food); }}>✏️</button>
-                  )}
-                </div>
-              );
-            })}
+            {grouped[type].map(food => (
+              <FoodRow key={food.id} food={food} t={t}
+                onTap={() => setDetailFood(food)}
+                onEdit={() => onEdit(food)}
+                onDelete={() => onDelete(food.id)}
+              />
+            ))}
           </div>
         )
       )}
 
+      {detailFood && (
+        <FoodDetailSheet food={detailFood} t={t}
+          onEdit={() => { setDetailFood(null); onEdit(detailFood); }}
+          onDelete={() => { setDetailFood(null); onDelete(detailFood.id); }}
+          onClose={() => setDetailFood(null)}
+        />
+      )}
+
       <button className="fab" onClick={onAdd} aria-label="Add food">＋</button>
+    </div>
+  );
+}
+
+function FoodRow({ food, t, onTap, onEdit, onDelete }) {
+  const tf = t.foodDb;
+  const [sheet, setSheet] = useState(false);
+  const longPress = useLongPress(() => setSheet(true));
+
+  return (
+    <>
+      <div className="food-db-row" onClick={onTap} {...longPress}>
+        <div className="food-db-info">
+          <div className="food-db-name">{food.name}</div>
+          <div className="food-db-meta">
+            {food.brand && `${food.brand} · `}
+            {food.kcalPer100g} kcal · {food.proteinPer100g}g protein · 💧{food.waterPer100g}%
+            <span> {tf.perHundred}</span>
+          </div>
+          {food.subtype && (
+            <div className="food-db-sub">
+              {tf.subtypes[food.type]?.[food.subtype] || food.subtype}
+            </div>
+          )}
+        </div>
+      </div>
+      {sheet && (
+        <ActionSheet
+          onClose={() => setSheet(false)}
+          items={[
+            { label: tf.edit || "Edit", icon: "✏️", onClick: () => { setSheet(false); onEdit(); } },
+            { label: t.common.delete, icon: "🗑", danger: true, onClick: () => { setSheet(false); onDelete(); } },
+          ]}
+        />
+      )}
+    </>
+  );
+}
+
+function FoodDetailSheet({ food, t, onEdit, onDelete, onClose }) {
+  const tf = t.foodDb;
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-handle" />
+        <div className="food-detail-header">
+          <div>
+            <div className="food-detail-name">{food.name}</div>
+            {food.brand && <div className="food-detail-brand">{food.brand}</div>}
+          </div>
+          <div className="food-detail-actions">
+            <button className="btn btn-ghost btn-sm" onClick={onEdit}>✏️</button>
+            <button className="btn btn-danger btn-sm" onClick={onDelete}>🗑</button>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 6, margin: "10px 0 14px" }}>
+          <TypeBadge type={food.type} label={tf.types[food.type]} />
+          {food.subtype && (
+            <span className="food-db-sub" style={{ margin: 0, alignSelf: "center" }}>
+              {tf.subtypes[food.type]?.[food.subtype] || food.subtype}
+            </span>
+          )}
+        </div>
+
+        <div className="food-detail-stats">
+          <div className="food-detail-stat">
+            <div className="food-detail-stat-val">{food.kcalPer100g}</div>
+            <div className="food-detail-stat-label">kcal / 100g</div>
+          </div>
+          <div className="food-detail-stat">
+            <div className="food-detail-stat-val">{food.proteinPer100g}g</div>
+            <div className="food-detail-stat-label">protein / 100g</div>
+          </div>
+          <div className="food-detail-stat">
+            <div className="food-detail-stat-val">{food.waterPer100g}%</div>
+            <div className="food-detail-stat-label">moisture</div>
+          </div>
+        </div>
+
+        <button className="btn btn-ghost btn-full" style={{ marginTop: 8 }} onClick={onClose}>
+          {t.foodDb.cancel || t.common.close || "Close"}
+        </button>
+      </div>
     </div>
   );
 }
