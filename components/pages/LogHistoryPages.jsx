@@ -1,6 +1,6 @@
 // components/pages/LogPage.jsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { fmtTime } from "../../utils.js";
 import { Lightbox, ConfirmDelete, DriveImg } from "../ui/index.jsx";
 import { getPhotoUrl } from "../../storage.js";
