@@ -4,7 +4,8 @@
  * without throwing; deeper behaviour is covered by unit/E2E tests.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // ─── Shared mock translation object ────────────────────────────────────────
@@ -172,5 +173,60 @@ describe('LogCard delete UX', () => {
     await userEvent.click(btn);
     await userEvent.click(screen.getByRole('button', { name: t.common.confirm }));
     expect(onDelete).toHaveBeenCalledWith('del-1');
+  });
+});
+
+// ─── useConfirmDelete hook ───────────────────────────────────────────────────
+import { useConfirmDelete, useFormState } from '../../components/ui/index.jsx';
+
+describe('useConfirmDelete', () => {
+  it('starts unarmed', () => {
+    const { result } = renderHook(() => useConfirmDelete('id-1', vi.fn()));
+    expect(result.current.armed).toBe(false);
+  });
+
+  it('arms on first trigger call', () => {
+    const { result } = renderHook(() => useConfirmDelete('id-1', vi.fn()));
+    act(() => result.current.trigger());
+    expect(result.current.armed).toBe(true);
+  });
+
+  it('calls onDelete with id on second trigger call', () => {
+    const onDelete = vi.fn();
+    const { result } = renderHook(() => useConfirmDelete('id-42', onDelete));
+    act(() => result.current.trigger()); // arm
+    act(() => result.current.trigger()); // confirm
+    expect(onDelete).toHaveBeenCalledWith('id-42');
+  });
+
+  it('auto-disarms after delay', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useConfirmDelete('id-1', vi.fn(), 100));
+    act(() => result.current.trigger());
+    expect(result.current.armed).toBe(true);
+    await act(async () => vi.advanceTimersByTime(150));
+    expect(result.current.armed).toBe(false);
+    vi.useRealTimers();
+  });
+});
+
+// ─── useFormState hook ───────────────────────────────────────────────────────
+describe('useFormState', () => {
+  it('returns initial form', () => {
+    const { result } = renderHook(() => useFormState({ name: 'Mochi', age: 3 }));
+    expect(result.current[0]).toEqual({ name: 'Mochi', age: 3 });
+  });
+
+  it('set(key, value) updates a single field', () => {
+    const { result } = renderHook(() => useFormState({ name: '', breed: '' }));
+    act(() => result.current[1]('name', 'Mochi'));
+    expect(result.current[0].name).toBe('Mochi');
+    expect(result.current[0].breed).toBe('');
+  });
+
+  it('patch(partial) merges multiple fields', () => {
+    const { result } = renderHook(() => useFormState({ type: 'wet', subtype: 'pate' }));
+    act(() => result.current[2]({ type: 'dry', subtype: 'kibble' }));
+    expect(result.current[0]).toEqual({ type: 'dry', subtype: 'kibble' });
   });
 });

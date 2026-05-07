@@ -9,8 +9,11 @@ export const fmtDate = (dateStr, locale = "zh-TW") => {
   return dt.toLocaleDateString(locale, { month: "short", day: "numeric", weekday: "short" });
 };
 
-export const fmtTime = (iso) =>
-  new Date(iso).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
+export const fmtTime = (iso, lang = "zh-TW") =>
+  new Date(iso).toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
+
+export const fmtWeekday = (dateStr, lang = "zh-TW") =>
+  new Date(dateStr + "T00:00:00").toLocaleDateString(lang, { weekday: "short" });
 
 export const last7Days = () =>
   Array.from({ length: 7 }, (_, i) => {

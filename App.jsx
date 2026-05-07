@@ -1,6 +1,6 @@
 // App.jsx — top-level state, routing, modal orchestration
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { LANGS } from "./i18n.js";
 import { uid, today } from "./utils.js";
 import { SAMPLE_FOODS } from "./constants.js";
@@ -59,24 +59,31 @@ export default function App() {
     return () => document.removeEventListener("visibilitychange", flush);
   }, []);
 
+  // ── Shared Drive pull + merge logic ──
+  // Both the initial pull and the token-change handler are identical in behaviour;
+  // extracting them here removes the duplication.
+  const applyDriveData = useCallback(async () => {
+    const data = await syncFromDrive();
+    if (data) {
+      if (data.lang)    setLang(data.lang);
+      if (data.profile) setProfile(data.profile);
+      if (data.foods)   setFoods(prev => mergeFoods(prev, data.foods));
+      if (data.logs)    setLogs(prev => mergeLogs(prev, data.logs));
+    } else {
+      // No Drive file yet — push local data now
+      console.log("[app] no Drive file, pushing local data");
+      if (stateRef.current) syncToDrive(stateRef.current);
+    }
+    setSyncStatus("ok");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Initial Drive pull (if already signed in from a previous session) ──
   useEffect(() => {
     if (!isSignedIn()) return;
     console.log("[app] already signed in — pulling from Drive");
-    syncFromDrive().then(data => {
-      if (data) {
-        if (data.lang)    setLang(data.lang);
-        if (data.profile) setProfile(data.profile);
-        if (data.foods)   setFoods(prev => mergeFoods(prev, data.foods));
-        if (data.logs)    setLogs(prev => mergeLogs(prev, data.logs));
-      } else {
-        // No Drive file yet — push local data now
-        console.log("[app] no Drive file, pushing local data");
-        if (stateRef.current) syncToDrive(stateRef.current);
-      }
-      setSyncStatus("ok");
-    }).catch((e) => { console.error("[app] initial pull failed", e); setSyncStatus("error"); });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    setSyncStatus("syncing");
+    applyDriveData().catch(e => { console.error("[app] initial pull failed", e); setSyncStatus("error"); });
+  }, [applyDriveData]);
 
   // ── Listen for sign-in / sign-out ──
   useEffect(() => {
@@ -84,22 +91,9 @@ export default function App() {
       if (!token) { setSyncStatus("idle"); return; }
       setSyncStatus("syncing");
       console.log("[app] token received — pulling from Drive");
-      try {
-        const data = await syncFromDrive();
-        if (data) {
-          if (data.lang)    setLang(data.lang);
-          if (data.profile) setProfile(data.profile);
-          if (data.foods)   setFoods(prev => mergeFoods(prev, data.foods));
-          if (data.logs)    setLogs(prev => mergeLogs(prev, data.logs));
-        } else {
-          // First-ever sign-in — push local data immediately
-          console.log("[app] first sign-in, pushing local data to Drive");
-          if (stateRef.current) await syncToDrive(stateRef.current);
-        }
-        setSyncStatus("ok");
-      } catch (e) { console.error("[app] sync failed", e); setSyncStatus("error"); }
+      applyDriveData().catch(e => { console.error("[app] sync failed", e); setSyncStatus("error"); });
     });
-  }, []);
+  }, [applyDriveData]);
 
   // ── Debounced Drive push after any state change ──
   useEffect(() => {
@@ -135,15 +129,18 @@ export default function App() {
   const addFood    = (food) => setFoods(prev => [{ ...food, id: uid() }, ...prev]);
   const updateFood = (food) => setFoods(prev => prev.map(f => f.id === food.id ? food : f));
 
-  // ── Today's derived data ──
-  const todayLogs    = logs.filter(l => l.date === today());
-  const todayMeals   = todayLogs.filter(l => l.kind === "meal");
-  const todayWaters  = todayLogs.filter(l => l.kind === "water");
-  const todayKcal    = todayMeals.reduce((s, l) => s + (l.totalKcal || 0), 0);
-  const todayProtein = todayMeals.reduce((s, l) => s + (l.totalProtein || 0), 0);
-  const todayWater   =
-    todayMeals.reduce((s, l) => s + (l.totalWater || 0), 0) +
-    todayWaters.reduce((s, l) => s + (l.ml || 0), 0);
+  // ── Today's derived data (memoised — only recomputes when logs change) ──
+  const { todayLogs, todayKcal, todayProtein, todayWater } = useMemo(() => {
+    const todayLogs  = logs.filter(l => l.date === today());
+    const meals      = todayLogs.filter(l => l.kind === "meal");
+    const waters     = todayLogs.filter(l => l.kind === "water");
+    const todayKcal    = meals.reduce((s, l) => s + (l.totalKcal    || 0), 0);
+    const todayProtein = meals.reduce((s, l) => s + (l.totalProtein || 0), 0);
+    const todayWater   =
+      meals.reduce( (s, l) => s + (l.totalWater || 0), 0) +
+      waters.reduce((s, l) => s + (l.ml         || 0), 0);
+    return { todayLogs, todayKcal, todayProtein, todayWater };
+  }, [logs]);
 
   const closeModal = () => setModal(null);
 

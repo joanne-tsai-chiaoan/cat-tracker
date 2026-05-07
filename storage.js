@@ -27,44 +27,32 @@ export const saveLogs    = (v) => localStorage.setItem(key("logs"),    JSON.stri
 
 // ── Merge helpers ─────────────────────────────────────────────────────────────
 
-// Union of two log arrays by ID. Drive is the base; local adds any entries not
-// yet synced (e.g. created while offline or before first sign-in).
-export function mergeLogs(local, remote) {
-  const byId = new Map((remote ?? []).map(l => [l.id, l]));
-  (local ?? []).forEach(l => { if (!byId.has(l.id)) byId.set(l.id, l); });
-  return [...byId.values()].sort((a, b) =>
-    new Date(b.createdAt) - new Date(a.createdAt)
-  );
+// Union of two arrays by ID. Drive is the base; local adds unseen entries.
+function mergeById(local, remote, sortFn) {
+  const byId = new Map((remote ?? []).map(x => [x.id, x]));
+  (local ?? []).forEach(x => { if (!byId.has(x.id)) byId.set(x.id, x); });
+  const result = [...byId.values()];
+  return sortFn ? result.sort(sortFn) : result;
 }
 
-// Union of two food arrays by ID. Same strategy as mergeLogs — Drive is the
-// base, local adds any foods created before sign-in or while offline.
-export function mergeFoods(local, remote) {
-  const byId = new Map((remote ?? []).map(f => [f.id, f]));
-  (local ?? []).forEach(f => { if (!byId.has(f.id)) byId.set(f.id, f); });
-  return [...byId.values()];
-}
+export const mergeLogs  = (l, r) => mergeById(l, r, (a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+export const mergeFoods = (l, r) => mergeById(l, r);
 
 // ── Drive sync ────────────────────────────────────────────────────────────────
 
-// Pull Drive → localStorage → return data (null on failure / not signed in)
+// Pull from Drive — returns parsed data or null.
+// localStorage persistence is handled by App.jsx's useEffect hooks; no double-write here.
 export async function syncFromDrive() {
   if (!isSignedIn()) return null;
   try {
-    const data = await readDriveData();
-    if (!data) return null;
-    if (data.lang)    localStorage.setItem(key("lang"),    JSON.stringify(data.lang));
-    if (data.profile) localStorage.setItem(key("profile"), JSON.stringify(data.profile));
-    if (data.foods)   localStorage.setItem(key("foods"),   JSON.stringify(data.foods));
-    if (data.logs)    localStorage.setItem(key("logs"),    JSON.stringify(data.logs));
-    return data;
+    return await readDriveData() ?? null;
   } catch (e) {
     console.error("Drive pull failed:", e);
     return null;
   }
 }
 
-// Push current state to Drive (only text data — photos are separate files)
+// Push current state to Drive (text data only — photos are separate files).
 export async function syncToDrive({ lang, profile, foods, logs }) {
   if (!isSignedIn()) return;
   try {
@@ -79,8 +67,8 @@ export async function syncToDrive({ lang, profile, foods, logs }) {
 const _photoCache = {};
 
 // Returns a displayable URL for a photo reference:
-//   - "data:..."      → return as-is (local data URL, no Drive needed)
-//   - "drive:FILE_ID" → fetch from Drive, cache blob URL
+//   "data:..."      → return as-is (local data URL, no Drive needed)
+//   "drive:FILE_ID" → fetch from Drive, cache blob URL
 export async function getPhotoUrl(ref) {
   if (!ref) return null;
   if (ref.startsWith("data:")) return ref;

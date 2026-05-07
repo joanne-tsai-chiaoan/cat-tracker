@@ -1,19 +1,19 @@
-// components/modals/AddFoodModal.jsx + ProfileModal.jsx
+// components/modals/FoodProfileModals.jsx
 
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import { readFileAsDataUrl } from "../../utils.js";
+import { ModalShell, FormInput, PillSelector, useFormState } from "../ui/index.jsx";
+
+// ── AddFoodModal ──────────────────────────────────────────────────────────────
 
 export function AddFoodModal({ t, initial, onSave, onClose }) {
-  const [form, setForm] = useState(initial || {
+  const [form, set, patch] = useFormState(initial || {
     name: "", brand: "", type: "wet", subtype: "pate",
     kcalPer100g: "", proteinPer100g: "", waterPer100g: "",
   });
 
-  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
-
   const handleTypeChange = (type) => {
-    const firstSubtype = Object.keys(t.foodDb.subtypes[type])[0];
-    setForm(prev => ({ ...prev, type, subtype: firstSubtype }));
+    patch({ type, subtype: Object.keys(t.foodDb.subtypes[type])[0] });
   };
 
   const handleSave = () => {
@@ -26,137 +26,126 @@ export function AddFoodModal({ t, initial, onSave, onClose }) {
     });
   };
 
-  const subtypeOptions = t.foodDb.subtypes[form.type] || {};
-
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
-        <div className="modal-handle" />
-        <div className="modal-title">{initial ? t.common.edit : t.foodDb.add}</div>
+    <ModalShell
+      title={initial ? t.common.edit : t.foodDb.add}
+      onClose={onClose}
+      onSave={handleSave}
+      saveLabel={t.foodDb.save}
+      closeLabel={t.foodDb.cancel}
+      saveDisabled={!form.name || !form.kcalPer100g}
+    >
+      <FormInput
+        label={t.foodDb.name}
+        placeholder={t.foodDb.namePlaceholder}
+        value={form.name}
+        onChange={e => set("name", e.target.value)}
+      />
+      <FormInput
+        label={t.foodDb.brand}
+        placeholder={t.foodDb.brandPlaceholder}
+        value={form.brand}
+        onChange={e => set("brand", e.target.value)}
+      />
 
-        <div className="form-group">
-          <label className="form-label">{t.foodDb.name}</label>
-          <input className="form-input" placeholder={t.foodDb.namePlaceholder}
-            value={form.name} onChange={e => set("name", e.target.value)} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">{t.foodDb.brand}</label>
-          <input className="form-input" placeholder={t.foodDb.brandPlaceholder}
-            value={form.brand} onChange={e => set("brand", e.target.value)} />
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t.foodDb.type}</label>
-            <select className="form-input form-select"
-              value={form.type} onChange={e => handleTypeChange(e.target.value)}>
-              {Object.entries(t.foodDb.types).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t.foodDb.subtype}</label>
-            <select className="form-input form-select"
-              value={form.subtype} onChange={e => set("subtype", e.target.value)}>
-              {Object.entries(subtypeOptions).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t.foodDb.kcalPer100g}</label>
-            <input className="form-input" type="number" min="0" placeholder="85"
-              value={form.kcalPer100g} onChange={e => set("kcalPer100g", e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t.foodDb.proteinPer100g}</label>
-            <input className="form-input" type="number" min="0" placeholder="10.2"
-              value={form.proteinPer100g} onChange={e => set("proteinPer100g", e.target.value)} />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">{t.foodDb.waterPer100g}</label>
-          <input className="form-input" type="number" min="0" max="100" placeholder="75"
-            value={form.waterPer100g} onChange={e => set("waterPer100g", e.target.value)} />
-          <p className="form-hint">{t.foodDb.waterPer100gHint}</p>
-        </div>
-
-        <button className="btn btn-primary btn-full" onClick={handleSave}
-          disabled={!form.name || !form.kcalPer100g}>
-          {t.foodDb.save}
-        </button>
-        <button className="btn btn-ghost btn-full" style={{ marginTop: 8 }} onClick={onClose}>
-          {t.foodDb.cancel}
-        </button>
+      <div className="form-row">
+        <FormInput
+          as="select" className="form-select"
+          label={t.foodDb.type}
+          value={form.type}
+          onChange={e => handleTypeChange(e.target.value)}
+        >
+          {Object.entries(t.foodDb.types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </FormInput>
+        <FormInput
+          as="select" className="form-select"
+          label={t.foodDb.subtype}
+          value={form.subtype}
+          onChange={e => set("subtype", e.target.value)}
+        >
+          {Object.entries(t.foodDb.subtypes[form.type] || {}).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </FormInput>
       </div>
-    </div>
+
+      <div className="form-row">
+        <FormInput
+          label={t.foodDb.kcalPer100g}
+          type="number" min="0" placeholder="85"
+          value={form.kcalPer100g}
+          onChange={e => set("kcalPer100g", e.target.value)}
+        />
+        <FormInput
+          label={t.foodDb.proteinPer100g}
+          type="number" min="0" placeholder="10.2"
+          value={form.proteinPer100g}
+          onChange={e => set("proteinPer100g", e.target.value)}
+        />
+      </div>
+
+      <FormInput
+        label={t.foodDb.waterPer100g}
+        hint={t.foodDb.waterPer100gHint}
+        type="number" min="0" max="100" placeholder="75"
+        value={form.waterPer100g}
+        onChange={e => set("waterPer100g", e.target.value)}
+      />
+    </ModalShell>
   );
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ProfileModal
+// ── ProfileModal ──────────────────────────────────────────────────────────────
 
 export function ProfileModal({ t, profile, onSave, onClose }) {
-  const [form, setForm] = useState(profile);
-  const photoRef = useRef();
-  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+  const [form, set] = useFormState(profile);
+  const photoRef    = useRef();
 
   const handlePhoto = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const dataUrl = await readFileAsDataUrl(file);
-    set("photo", dataUrl);
+    set("photo", await readFileAsDataUrl(file));
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
-        <div className="modal-handle" />
-        <div className="modal-title">{t.catProfile.title}</div>
-
-        <div className="profile-photo-wrap">
-          <div className="profile-photo" onClick={() => photoRef.current.click()}>
-            {form.photo ? <img src={form.photo} alt="cat" /> : <span>🐱</span>}
-            <div className="profile-photo-overlay">{t.catProfile.changePhoto}</div>
-          </div>
-          <input ref={photoRef} type="file" accept="image/*" capture="environment"
-            style={{ display: "none" }} onChange={handlePhoto} />
+    <ModalShell
+      title={t.catProfile.title}
+      onClose={onClose}
+      onSave={() => onSave(form)}
+      saveLabel={t.catProfile.save}
+      closeLabel={t.common.close}
+    >
+      <div className="profile-photo-wrap">
+        <div className="profile-photo" onClick={() => photoRef.current.click()}>
+          {form.photo ? <img src={form.photo} alt="cat" /> : <span>🐱</span>}
+          <div className="profile-photo-overlay">{t.catProfile.changePhoto}</div>
         </div>
-
-        <div className="form-group">
-          <label className="form-label">{t.catProfile.name}</label>
-          <input className="form-input" placeholder={t.catProfile.namePlaceholder}
-            value={form.name} onChange={e => set("name", e.target.value)} />
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t.catProfile.breed}</label>
-            <input className="form-input" placeholder={t.catProfile.breedPlaceholder}
-              value={form.breed} onChange={e => set("breed", e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t.catProfile.weight}</label>
-            <input className="form-input" type="number" min="0" step="0.1"
-              placeholder={t.catProfile.weightPlaceholder}
-              value={form.weight} onChange={e => set("weight", e.target.value)} />
-          </div>
-        </div>
-
-        <button className="btn btn-primary btn-full" onClick={() => onSave(form)}>
-          {t.catProfile.save}
-        </button>
-        <button className="btn btn-ghost btn-full" style={{ marginTop: 8 }} onClick={onClose}>
-          {t.common.close}
-        </button>
+        <input ref={photoRef} type="file" accept="image/*" capture="environment"
+          style={{ display: "none" }} onChange={handlePhoto} />
       </div>
-    </div>
+
+      <FormInput
+        label={t.catProfile.name}
+        placeholder={t.catProfile.namePlaceholder}
+        value={form.name}
+        onChange={e => set("name", e.target.value)}
+      />
+
+      <div className="form-row">
+        <FormInput
+          label={t.catProfile.breed}
+          placeholder={t.catProfile.breedPlaceholder}
+          value={form.breed}
+          onChange={e => set("breed", e.target.value)}
+        />
+        <FormInput
+          label={t.catProfile.weight}
+          type="number" min="0" step="0.1"
+          placeholder={t.catProfile.weightPlaceholder}
+          value={form.weight}
+          onChange={e => set("weight", e.target.value)}
+        />
+      </div>
+    </ModalShell>
   );
 }
