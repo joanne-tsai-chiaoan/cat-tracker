@@ -268,18 +268,22 @@ export function useConfirmDelete(id, onDelete, delay = 2500) {
 }
 
 // ── useLongPress ──────────────────────────────────────────────────────────────
-// Returns touch/mouse handlers that fire onLongPress after `delay` ms.
+// Timer-based long-press for touch, plus onContextMenu for desktop right-click.
+// CSS on the element must include: -webkit-touch-callout: none; user-select: none;
 export function useLongPress(onLongPress, delay = 550) {
   const timer = useRef(null);
-  const clear  = useCallback(() => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } }, []);
-  const start  = useCallback((e) => {
-    // only primary touch/mouse
-    if (e.type === "mousedown" && e.button !== 0) return;
+  const cancel = useCallback(() => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+  }, []);
+  const start = useCallback(() => {
+    cancel();
     timer.current = setTimeout(() => { timer.current = null; onLongPress(); }, delay);
-  }, [onLongPress, delay]);
+  }, [onLongPress, delay, cancel]);
   return {
-    onMouseDown:  start, onMouseUp: clear, onMouseLeave: clear,
-    onTouchStart: start, onTouchEnd: clear, onTouchMove: clear,
+    onTouchStart:  start,
+    onTouchEnd:    cancel,
+    onTouchMove:   cancel,
+    onContextMenu: (e) => { e.preventDefault(); onLongPress(); },
   };
 }
 

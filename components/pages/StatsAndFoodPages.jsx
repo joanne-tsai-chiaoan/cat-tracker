@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { last7Days, fmtWeekday } from "../../utils.js";
 import { TYPE_COLORS, POOP_CONSISTENCY_COLORS, POOP_COLORS, CHART_PALETTE } from "../../constants.js";
-import { PieChart, WeeklyBarChart, SectionHeader, EmptyState, TabSelector, TypeBadge, ActionSheet } from "../ui/index.jsx";
+import { PieChart, WeeklyBarChart, SectionHeader, EmptyState, TabSelector, TypeBadge, ActionSheet, useLongPress } from "../ui/index.jsx";
 
 // ── StatsPage ─────────────────────────────────────────────────────────────────
 export function StatsPage({ t, logs, foods }) {
@@ -250,15 +250,11 @@ export function FoodDbPage({ t, foods, onAdd, onEdit, onDelete }) {
 function FoodRow({ food, t, onTap, onEdit, onDelete }) {
   const tf = t.foodDb;
   const [sheet, setSheet] = useState(false);
-
-  const handleContextMenu = (e) => {
-    e.preventDefault();
-    setSheet(true);
-  };
+  const longPress = useLongPress(() => setSheet(true));
 
   return (
     <>
-      <div className="food-db-row" onClick={onTap} onContextMenu={handleContextMenu}>
+      <div className="food-db-row" onClick={onTap} {...longPress}>
         <div className="food-db-info">
           <div className="food-db-name">{food.name}</div>
           <div className="food-db-meta">
@@ -277,7 +273,7 @@ function FoodRow({ food, t, onTap, onEdit, onDelete }) {
         <ActionSheet
           onClose={() => setSheet(false)}
           items={[
-            { label: tf.edit || "Edit", icon: "✏️", onClick: () => { setSheet(false); onEdit(); } },
+            { label: tf.edit || t.common.edit, icon: "✏️", onClick: () => { setSheet(false); onEdit(); } },
             { label: t.common.delete, icon: "🗑", danger: true, onClick: () => { setSheet(false); onDelete(); } },
           ]}
         />
