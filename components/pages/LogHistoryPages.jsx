@@ -33,22 +33,27 @@ export function LogCard({ log, t, onDelete }) {
   const [confirm, setConfirm] = useState(false);
   const [lightbox, setLightbox] = useState(null);
 
+  // Auto-cancel delete confirm after 2.5s
+  useEffect(() => {
+    if (!confirm) return;
+    const t = setTimeout(() => setConfirm(false), 2500);
+    return () => clearTimeout(t);
+  }, [confirm]);
+
   return (
     <div className={`log-card kind-${log.kind}`}>
+      {/* Corner delete — tap once to arm, tap again to confirm */}
+      <button
+        className={`card-del${confirm ? " card-del--confirm" : ""}`}
+        onClick={() => confirm ? onDelete(log.id) : setConfirm(true)}
+        aria-label={confirm ? t.common.confirm : t.common.delete}
+      >
+        {confirm ? "✓" : "×"}
+      </button>
+
       {log.kind === "meal"  && <MealCardBody  log={log} t={t} onPhotoClick={setLightbox} />}
       {log.kind === "water" && <WaterCardBody log={log} t={t} />}
       {log.kind === "waste" && <WasteCardBody log={log} t={t} onPhotoClick={setLightbox} />}
-
-      <div className="log-footer">
-        {confirm
-          ? <ConfirmDelete label={t.common.confirm}
-              onConfirm={() => onDelete(log.id)}
-              onCancel={() => setConfirm(false)} />
-          : <button className="btn btn-ghost btn-sm" onClick={() => setConfirm(true)}>
-              🗑 {t.common.delete}
-            </button>
-        }
-      </div>
 
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
     </div>

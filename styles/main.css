@@ -30,16 +30,17 @@ body {
   background: var(--cream);
   font-family: 'Nunito', sans-serif;
   color: var(--text);
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;           /* scroll lives in .page only */
   -webkit-font-smoothing: antialiased;
-  overscroll-behavior: none;
 }
 #root {
   max-width: 430px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 /* ── App shell ── */
@@ -109,7 +110,7 @@ body {
   width: 100%; max-width: 430px;
   background: var(--warm-white);
   border-top: 1px solid var(--latte);
-  display: flex; padding: 8px 0 22px;
+  display: flex; padding: 8px 0 max(16px, env(safe-area-inset-bottom));
   z-index: 50;
   box-shadow: 0 -2px 12px var(--shadow);
 }
@@ -123,7 +124,14 @@ body {
 .nav-btn .nav-icon { font-size: 20px; line-height: 1; }
 
 /* ── Page ── */
-.page { padding: 20px; animation: fadeUp .22s ease; }
+.page {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;        /* smooth momentum scroll on iOS */
+  overscroll-behavior-y: contain;           /* elastic bounce within page, not body */
+  padding: 16px 16px calc(80px + env(safe-area-inset-bottom));
+  animation: fadeUp .22s ease;
+}
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
 
 .section-title {
@@ -166,10 +174,11 @@ body {
 /* ── Log entry cards ── */
 .log-card {
   background: var(--warm-white);
-  border-radius: var(--radius); padding: 15px;
+  border-radius: var(--radius); padding: 11px 11px 11px 14px;
   box-shadow: 0 2px 12px var(--shadow);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   border-left: 3px solid transparent;
+  position: relative;
 }
 .log-card.kind-meal   { border-left-color: var(--caramel-light); }
 .log-card.kind-water  { border-left-color: var(--sky); }
@@ -177,7 +186,7 @@ body {
 
 .log-card-header {
   display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 .log-kind-label {
   font-family: 'Lora', serif; font-size: 15px; font-weight: 600;
@@ -192,7 +201,7 @@ body {
 /* food rows inside meal card */
 .log-food-row {
   display: flex; align-items: center; gap: 8px;
-  padding: 7px 0; border-bottom: 1px solid var(--latte);
+  padding: 4px 0; border-bottom: 1px solid var(--latte);
 }
 .log-food-row:last-of-type { border-bottom: none; }
 .log-food-name {
@@ -227,11 +236,18 @@ body {
 }
 @keyframes pulse { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
 
-.log-footer {
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--latte);
+/* Corner delete button — replaces the full-width log-footer */
+.card-del {
+  position: absolute; top: 8px; right: 8px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: none; border: none; cursor: pointer;
+  font-size: 15px; color: var(--text-muted); opacity: 0.4;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s, background .15s, color .15s;
+  -webkit-tap-highlight-color: transparent;
 }
-.confirm-text { font-size: 12px; color: var(--text-muted); flex: 1; }
+.card-del:hover, .card-del:active { opacity: 1; background: var(--cream); }
+.card-del--confirm { opacity: 1; background: #ffeaea; color: #c0392b; font-weight: 700; }
 
 /* ── Date label ── */
 .date-label {
