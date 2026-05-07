@@ -97,12 +97,14 @@ test.describe('Add log modal smoke', () => {
     await expect(page.locator('.section-title, .empty-state').first()).toBeVisible();
   });
 
-  test('FAB opens and modal appears', async ({ page }) => {
-    // The FAB is the main action button on the Log tab
-    const fab = page.locator('.fab');
-    await expect(fab).toBeVisible();
-    await fab.click();
-    // A modal or action sheet must appear
-    await expect(page.locator('.modal, .action-sheet, [role="dialog"]')).toBeVisible({ timeout: 3_000 });
+  test('action buttons are visible on log tab', async ({ page }) => {
+    // Log tab has 3 action buttons (meal/water/waste), not a FAB
+    const actionBtns = page.locator('.action-btn');
+    await expect(actionBtns).toHaveCount(3);
+  });
+
+  test('meal modal opens from action button', async ({ page }) => {
+    await page.locator('.action-btn').first().click();
+    await expect(page.locator('.modal')).toBeVisible({ timeout: 3_000 });
   });
 });
