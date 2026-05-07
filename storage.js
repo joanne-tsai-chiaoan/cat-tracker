@@ -25,6 +25,18 @@ export const saveProfile = (v) => localStorage.setItem(key("profile"), JSON.stri
 export const saveFoods   = (v) => localStorage.setItem(key("foods"),   JSON.stringify(v));
 export const saveLogs    = (v) => localStorage.setItem(key("logs"),    JSON.stringify(v));
 
+// ── Merge helpers ─────────────────────────────────────────────────────────────
+
+// Union of two log arrays by ID. Drive is the base; local adds any entries not
+// yet synced (e.g. created while offline or before first sign-in).
+export function mergeLogs(local, remote) {
+  const byId = new Map((remote ?? []).map(l => [l.id, l]));
+  (local ?? []).forEach(l => { if (!byId.has(l.id)) byId.set(l.id, l); });
+  return [...byId.values()].sort((a, b) =>
+    new Date(b.createdAt) - new Date(a.createdAt)
+  );
+}
+
 // ── Drive sync ────────────────────────────────────────────────────────────────
 
 // Pull Drive → localStorage → return data (null on failure / not signed in)
