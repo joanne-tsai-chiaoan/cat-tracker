@@ -178,6 +178,7 @@ body {
   margin-bottom: 8px;
   border-left: 4px solid transparent;
   position: relative;
+  user-select: none; -webkit-user-select: none;
 }
 .log-card.kind-meal   { border-left-color: var(--caramel-light); }
 .log-card.kind-water  { border-left-color: var(--sky); }
@@ -321,7 +322,7 @@ body {
 .food-db-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 0; border-bottom: 1px solid var(--latte);
-  cursor: pointer; user-select: none; position: relative;
+  cursor: pointer; user-select: none; -webkit-user-select: none; position: relative;
 }
 
 .food-db-row:last-child { border-bottom: none; }

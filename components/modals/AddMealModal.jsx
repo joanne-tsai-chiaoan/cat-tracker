@@ -4,12 +4,12 @@ import { useState } from "react";
 import { today } from "../../utils.js";
 import { ModalShell, FormInput, PillSelector, PhotoPicker } from "../ui/index.jsx";
 
-export function AddMealModal({ t, foods, onSave, onClose }) {
-  const [mealType, setMealType] = useState("breakfast");
-  const [items, setItems] = useState([]);
-  const [extraWaterMl, setExtraWaterMl] = useState("");
-  const [note, setNote] = useState("");
-  const [photos, setPhotos] = useState([]);
+export function AddMealModal({ t, foods, initial, onSave, onClose }) {
+  const [mealType, setMealType] = useState(initial?.mealType || "breakfast");
+  const [items, setItems] = useState(initial?.items || []);
+  const [extraWaterMl, setExtraWaterMl] = useState(initial?.extraWaterMl?.toString() || "");
+  const [note, setNote] = useState(initial?.note || "");
+  const [photos, setPhotos] = useState(initial?.photos || initial?.photoIds || []);
   const [addingFood, setAddingFood] = useState(false);
   const [selFoodId, setSelFoodId] = useState(foods[0]?.id || "");
   const [grams, setGrams] = useState("");
@@ -53,7 +53,7 @@ export function AddMealModal({ t, foods, onSave, onClose }) {
 
   return (
     <ModalShell
-      title={t.log.addMeal}
+      title={initial ? (t.common.edit || "Edit") : t.log.addMeal}
       onClose={onClose}
       onSave={handleSave}
       saveLabel={t.log.save}
