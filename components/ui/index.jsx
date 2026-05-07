@@ -45,7 +45,7 @@ export function PhotoPicker({ photos, onChange, label }) {
           </div>
         ))}
         <button className="photo-add-btn" onClick={() => inputRef.current.click()}>📷</button>
-        <input ref={inputRef} type="file" accept="image/*" capture="environment"
+        <input ref={inputRef} type="file" accept="image/*"
           style={{ display: "none" }} onChange={handleFile} />
       </div>
     </div>
