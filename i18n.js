@@ -133,7 +133,7 @@ export const LANGS = {
     },
 
     water: {
-      title: "Water", sub: "Hydration Log",
+      title: "Hydration", sub: "Hydration Log",
       amount: "Amount (ml)", amountPlaceholder: "Enter ml",
       source: "Source",
       sources: { bowl: "Water bowl", fountain: "Fountain", syringe: "Syringe", other: "Other" },

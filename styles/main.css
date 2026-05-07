@@ -33,6 +33,9 @@ body {
   color: var(--text);
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   overscroll-behavior: none;
 }
 #root {
@@ -42,6 +45,7 @@ body {
   flex-direction: column;
   min-height: 100dvh;
 }
+input, textarea, select { -webkit-user-select: text; user-select: text; }
 
 /* ── Header ── */
 .app-header {
@@ -178,7 +182,8 @@ body {
   margin-bottom: 8px;
   border-left: 4px solid transparent;
   position: relative;
-  user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
 .log-card.kind-meal   { border-left-color: var(--caramel-light); }
 .log-card.kind-water  { border-left-color: var(--sky); }
@@ -235,6 +240,16 @@ body {
   animation: pulse 1.2s ease-in-out infinite;
 }
 @keyframes pulse { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
+
+/* Inline photo thumbnail in card header */
+.log-card-photo { position: relative; flex-shrink: 0; margin: 0 8px; }
+.log-card-photo-img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; cursor: pointer; display: block; }
+.log-card-photo-count {
+  position: absolute; bottom: 2px; right: 2px;
+  background: rgba(0,0,0,.55); color: white;
+  font-size: 9px; border-radius: 4px; padding: 1px 4px; line-height: 1.4;
+  pointer-events: none;
+}
 
 /* Corner delete button — replaces the full-width log-footer */
 .card-del {
@@ -322,7 +337,7 @@ body {
 .food-db-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 0; border-bottom: 1px solid var(--latte);
-  cursor: pointer; user-select: none; -webkit-user-select: none; position: relative;
+  cursor: pointer; -webkit-touch-callout: none; touch-action: manipulation; position: relative;
 }
 
 .food-db-row:last-child { border-bottom: none; }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { fmtTime } from "../../utils.js";
-import { Lightbox, DriveImg, SectionHeader, EmptyState, TabSelector, TypeBadge, useConfirmDelete, ActionSheet } from "../ui/index.jsx";
+import { Lightbox, DriveImg, SectionHeader, EmptyState, TabSelector, TypeBadge, useConfirmDelete, ActionSheet, useLongPress } from "../ui/index.jsx";
 import { getPhotoUrl } from "../../storage.js";
 
 // ── LogPage ───────────────────────────────────────────────────────────────────
@@ -23,14 +23,10 @@ export function LogCard({ log, t, onDelete, onEdit }) {
   const { armed, trigger } = useConfirmDelete(log.id, onDelete);
   const [lightbox, setLightbox] = useState(null);
   const [sheet,    setSheet]    = useState(false);
-
-  const handleContextMenu = (e) => {
-    e.preventDefault();
-    setSheet(true);
-  };
+  const longPress = useLongPress(() => setSheet(true));
 
   return (
-    <div className={`log-card kind-${log.kind}`} onContextMenu={handleContextMenu}>
+    <div className={`log-card kind-${log.kind}`} {...longPress}>
       <button
         className={`card-del${armed ? " card-del--confirm" : ""}`}
         onClick={trigger}
@@ -61,6 +57,12 @@ export function LogCard({ log, t, onDelete, onEdit }) {
 function MealCardBody({ log, t, onPhotoClick }) {
   const isSingle   = log.items.length === 1;
   const totalGrams = log.items.reduce((s, i) => s + i.grams, 0);
+  const photoRefs  = log.photoIds || log.photos || [];
+
+  const openPhoto = (ref) => {
+    if (ref.startsWith("data:")) { onPhotoClick(ref); return; }
+    getPhotoUrl(ref).then(url => { if (url) onPhotoClick(url); });
+  };
 
   return (
     <>
@@ -79,6 +81,13 @@ function MealCardBody({ log, t, onPhotoClick }) {
             <span className="log-summary-sub">🔥{log.totalKcal.toFixed(0)} · 💪{log.totalProtein.toFixed(1)}g · 💧{log.totalWater.toFixed(0)}ml</span>
           </div>
         </div>
+        {photoRefs.length > 0 && (
+          <div className="log-card-photo">
+            <DriveImg photoRef={photoRefs[0]} className="log-card-photo-img"
+              onClick={() => openPhoto(photoRefs[0])} />
+            {photoRefs.length > 1 && <span className="log-card-photo-count">+{photoRefs.length - 1}</span>}
+          </div>
+        )}
         <div className="log-summary">
           <span className="log-summary-main">{totalGrams}g</span>
         </div>
@@ -101,7 +110,6 @@ function MealCardBody({ log, t, onPhotoClick }) {
       )}
 
       {log.note && <div className="log-note">💬 {log.note}</div>}
-      <PhotoStrip log={log} onPhotoClick={onPhotoClick} />
     </>
   );
 }
@@ -132,15 +140,31 @@ function WaterCardBody({ log, t }) {
 function WasteCardBody({ log, t, onPhotoClick }) {
   const tw = t.waste;
   const isPoop = log.wasteType === "poop";
+  const photoRefs = log.photoIds || log.photos || [];
+
+  const openPhoto = (ref) => {
+    if (ref.startsWith("data:")) { onPhotoClick(ref); return; }
+    getPhotoUrl(ref).then(url => { if (url) onPhotoClick(url); });
+  };
+
   return (
     <>
       <div className="log-card-header">
-        <div>
+        <div className="log-card-left">
           <div className="log-kind-label">
             {isPoop ? "💩" : "💧"} {tw.types[log.wasteType]}
           </div>
-          <div className="log-time">{fmtTime(log.createdAt)}</div>
+          <div className="log-card-meta-row">
+            <span className="log-time">{fmtTime(log.createdAt)}</span>
+          </div>
         </div>
+        {photoRefs.length > 0 && (
+          <div className="log-card-photo">
+            <DriveImg photoRef={photoRefs[0]} className="log-card-photo-img"
+              onClick={() => openPhoto(photoRefs[0])} />
+            {photoRefs.length > 1 && <span className="log-card-photo-count">+{photoRefs.length - 1}</span>}
+          </div>
+        )}
       </div>
 
       {isPoop && (
@@ -159,28 +183,7 @@ function WasteCardBody({ log, t, onPhotoClick }) {
       )}
 
       {log.note && <div className="log-note">💬 {log.note}</div>}
-      <PhotoStrip log={log} onPhotoClick={onPhotoClick} />
     </>
-  );
-}
-
-function PhotoStrip({ log, onPhotoClick }) {
-  // Support both legacy (photos: [dataUrl]) and current (photoIds: [driveRef]) formats
-  const refs = log.photoIds || log.photos || [];
-  if (!refs.length) return null;
-
-  const handleClick = (ref) => {
-    if (ref.startsWith("data:")) { onPhotoClick(ref); return; }
-    getPhotoUrl(ref).then(url => { if (url) onPhotoClick(url); });
-  };
-
-  return (
-    <div className="log-photos">
-      {refs.map((ref, i) => (
-        <DriveImg key={i} photoRef={ref} className="log-photo"
-          onClick={() => handleClick(ref)} />
-      ))}
-    </div>
   );
 }
 
