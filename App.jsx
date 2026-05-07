@@ -9,7 +9,7 @@ import {
   saveLang, saveProfile, saveFoods, saveLogs,
   syncFromDrive, syncToDrive,
 } from "./storage.js";
-import { isSignedIn, signIn, signOut, onTokenChange } from "./auth.js";
+import { isSignedIn, signIn, signOut, onTokenChange, tryAutoRefresh } from "./auth.js";
 import { uploadPhoto } from "./drive.js";
 
 import { LogPage, HistoryPage }     from "./components/pages/LogHistoryPages.jsx";
@@ -43,6 +43,21 @@ export default function App() {
   useEffect(() => { saveProfile(profile); }, [profile]);
   useEffect(() => { saveFoods(foods); },     [foods]);
   useEffect(() => { saveLogs(logs); },       [logs]);
+
+  // ── On mount: attempt silent token refresh (keeps user logged in across reloads) ──
+  useEffect(() => { tryAutoRefresh(); }, []);
+
+  // ── Flush Drive sync immediately when user switches away / closes tab ──
+  useEffect(() => {
+    const flush = () => {
+      if (document.visibilityState === "hidden" && isSignedIn() && stateRef.current) {
+        clearTimeout(syncTimer.current);
+        syncToDrive(stateRef.current); // fire-and-forget; browser allows short async on hide
+      }
+    };
+    document.addEventListener("visibilitychange", flush);
+    return () => document.removeEventListener("visibilitychange", flush);
+  }, []);
 
   // ── Initial Drive pull (if already signed in from a previous session) ──
   useEffect(() => {

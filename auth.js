@@ -59,6 +59,16 @@ export async function signIn(onSuccess) {
   getClient().requestAccessToken({ prompt: "" });
 }
 
+// Call on page load: silently restores session if token expired.
+// GIS will re-issue a token without any UI if consent was previously granted.
+export async function tryAutoRefresh() {
+  if (!localStorage.getItem(LS_TOKEN)) return; // never signed in
+  if (isSignedIn()) return;                     // token still valid
+  console.log("[auth] token expired — attempting silent refresh");
+  await waitForGIS();
+  getClient().requestAccessToken({ prompt: "" });
+}
+
 export function signOut() {
   console.log("[auth] signOut");
   const token = getToken();
