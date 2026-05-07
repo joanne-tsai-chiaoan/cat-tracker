@@ -1,10 +1,20 @@
-// vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  // If deploying to cat.joanne.wiki (root domain), leave base as '/'
-  // If deploying to a subdirectory like github.com/user/repo, set base: '/repo-name/'
   base: '/',
+
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.js'],
+    // Exclude Playwright E2E tests — those run via `npm run test:e2e`
+    exclude: ['**/node_modules/**', '**/e2e/**', '**/*.spec.js'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      include: ['storage.js', 'auth.js', 'components/**/*.jsx'],
+    },
+  },
 });
