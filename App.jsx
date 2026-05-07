@@ -196,17 +196,15 @@ export default function App() {
           <>
             {/* Quick-action buttons */}
             <div className="action-row">
-              <button className="action-btn" onClick={() => setModal("addMeal")}>
+              <button className="action-btn action-btn--meal" onClick={() => setModal("addMeal")}>
                 <span className="action-icon">🍽</span>
                 {t.log.addMeal}
               </button>
-              <button className="action-btn" onClick={() => setModal("addWater")}
-                style={{ borderColor: "var(--sky-light)" }}>
+              <button className="action-btn action-btn--water" onClick={() => setModal("addWater")}>
                 <span className="action-icon">💧</span>
                 {t.log.addWater}
               </button>
-              <button className="action-btn" onClick={() => setModal("addWaste")}
-                style={{ borderColor: "#c8e8c0" }}>
+              <button className="action-btn action-btn--waste" onClick={() => setModal("addWaste")}>
                 <span className="action-icon">🌿</span>
                 {t.log.addWaste}
               </button>

@@ -192,7 +192,8 @@ function EmptyChart() {
 
 // ── FoodDbPage ────────────────────────────────────────────────────────────────
 export function FoodDbPage({ t, foods, onAdd, onEdit }) {
-  const [search, setSearch] = useState("");
+  const [search,     setSearch]     = useState("");
+  const [expandedId, setExpandedId] = useState(null);
   const tf = t.foodDb;
 
   const filtered = foods.filter(f =>
@@ -222,24 +223,31 @@ export function FoodDbPage({ t, foods, onAdd, onEdit }) {
             <div className="food-type-header">
               <TypeBadge type={type} label={tf.types[type]} />
             </div>
-            {grouped[type].map(food => (
-              <div key={food.id} className="food-db-row">
-                <div className="food-db-info">
-                  <div className="food-db-name">{food.name}</div>
-                  <div className="food-db-meta">
-                    {food.brand && `${food.brand} · `}
-                    {food.kcalPer100g} kcal · {food.proteinPer100g}g protein · 💧{food.waterPer100g}%
-                    <span style={{ color: "var(--text-muted)" }}> {tf.perHundred}</span>
-                  </div>
-                  {food.subtype && (
-                    <div className="food-db-sub">
-                      {tf.subtypes[food.type]?.[food.subtype] || food.subtype}
+            {grouped[type].map(food => {
+              const isOpen = expandedId === food.id;
+              return (
+                <div key={food.id} className="food-db-row"
+                  onClick={() => setExpandedId(isOpen ? null : food.id)}>
+                  <div className="food-db-info">
+                    <div className="food-db-name">{food.name}</div>
+                    <div className="food-db-meta">
+                      {food.brand && `${food.brand} · `}
+                      {food.kcalPer100g} kcal · {food.proteinPer100g}g protein · 💧{food.waterPer100g}%
+                      <span> {tf.perHundred}</span>
                     </div>
+                    {food.subtype && (
+                      <div className="food-db-sub">
+                        {tf.subtypes[food.type]?.[food.subtype] || food.subtype}
+                      </div>
+                    )}
+                  </div>
+                  {isOpen && (
+                    <button className="btn btn-ghost btn-sm"
+                      onClick={e => { e.stopPropagation(); onEdit(food); }}>✏️</button>
                   )}
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => onEdit(food)}>✏️</button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )
       )}

@@ -43,21 +43,30 @@ export function LogCard({ log, t, onDelete }) {
 }
 
 function MealCardBody({ log, t, onPhotoClick }) {
+  const isSingle   = log.items.length === 1;
+  const totalGrams = log.items.reduce((s, i) => s + i.grams, 0);
+
   return (
     <>
       <div className="log-card-header">
-        <div>
-          <div className="log-kind-label">{t.log.mealTypes[log.mealType] || log.mealType}</div>
+        <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+          {isSingle ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <TypeBadge type={log.items[0].foodType} label={t.foodDb.types[log.items[0].foodType]} />
+              <span className="log-kind-label" style={{ fontSize: 14 }}>{log.items[0].foodName}</span>
+            </div>
+          ) : (
+            <div className="log-kind-label">{t.log.mealTypes[log.mealType] || log.mealType}</div>
+          )}
           <div className="log-time">{fmtTime(log.createdAt)}</div>
         </div>
         <div className="log-summary">
-          <span className="log-summary-main">{log.totalKcal.toFixed(0)} kcal</span>
-          <span className="log-summary-sub">{log.totalProtein.toFixed(1)}g protein</span>
-          <span className="log-summary-sub">💧 {log.totalWater.toFixed(0)} ml</span>
+          <span className="log-summary-main">{totalGrams}g</span>
+          <span className="log-summary-sub">🔥{log.totalKcal.toFixed(0)} · 💪{log.totalProtein.toFixed(1)}g · 💧{log.totalWater.toFixed(0)}ml</span>
         </div>
       </div>
 
-      {log.items.map((item, i) => (
+      {!isSingle && log.items.map((item, i) => (
         <div key={i} className="log-food-row">
           <TypeBadge type={item.foodType} label={t.foodDb.types[item.foodType]} />
           <span className="log-food-name">{item.foodName}</span>
