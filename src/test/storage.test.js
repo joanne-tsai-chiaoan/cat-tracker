@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mergeLogs, loadLogs, saveLogs } from '../../storage.js';
+import { mergeLogs, mergeFoods, loadLogs, saveLogs } from '../../storage.js';
 
 describe('mergeLogs', () => {
   it('returns remote entries when local is empty', () => {
@@ -41,6 +41,48 @@ describe('mergeLogs', () => {
   it('handles null/undefined inputs safely', () => {
     expect(() => mergeLogs(null, null)).not.toThrow();
     expect(mergeLogs(null, null)).toEqual([]);
+  });
+});
+
+describe('mergeFoods', () => {
+  it('returns remote foods when local is empty', () => {
+    const remote = [{ id: 'a', name: 'Tuna' }];
+    expect(mergeFoods([], remote)).toEqual(remote);
+  });
+
+  it('returns local foods when remote is empty', () => {
+    const local = [{ id: 'b', name: 'Salmon' }];
+    expect(mergeFoods(local, [])).toEqual(local);
+  });
+
+  it('deduplicates by id, preferring remote version', () => {
+    const local  = [{ id: 'x', name: 'local name' }];
+    const remote = [{ id: 'x', name: 'remote name' }];
+    const result = mergeFoods(local, remote);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('remote name');
+  });
+
+  it('includes local-only foods not present in remote', () => {
+    const local  = [{ id: 'local-only', name: 'New food' }];
+    const remote = [{ id: 'remote-only', name: 'Drive food' }];
+    const result = mergeFoods(local, remote);
+    expect(result).toHaveLength(2);
+    expect(result.map(f => f.id)).toContain('local-only');
+    expect(result.map(f => f.id)).toContain('remote-only');
+  });
+
+  it('preserves all remote foods even with no local foods', () => {
+    const remote = [
+      { id: 'r1', name: 'Food 1' },
+      { id: 'r2', name: 'Food 2' },
+    ];
+    expect(mergeFoods(null, remote)).toEqual(remote);
+  });
+
+  it('handles null/undefined inputs safely', () => {
+    expect(() => mergeFoods(null, null)).not.toThrow();
+    expect(mergeFoods(null, null)).toEqual([]);
   });
 });
 

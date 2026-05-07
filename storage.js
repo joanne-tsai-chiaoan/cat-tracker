@@ -37,6 +37,14 @@ export function mergeLogs(local, remote) {
   );
 }
 
+// Union of two food arrays by ID. Same strategy as mergeLogs — Drive is the
+// base, local adds any foods created before sign-in or while offline.
+export function mergeFoods(local, remote) {
+  const byId = new Map((remote ?? []).map(f => [f.id, f]));
+  (local ?? []).forEach(f => { if (!byId.has(f.id)) byId.set(f.id, f); });
+  return [...byId.values()];
+}
+
 // ── Drive sync ────────────────────────────────────────────────────────────────
 
 // Pull Drive → localStorage → return data (null on failure / not signed in)
