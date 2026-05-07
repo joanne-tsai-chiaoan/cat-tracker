@@ -65,7 +65,7 @@ body {
 
 .header-info { flex: 1; }
 .cat-name {
-  font-family: 'Lora', serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
   font-size: 20px; font-weight: 600;
   color: var(--espresso); line-height: 1.15;
 }
@@ -129,7 +129,7 @@ body {
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
 
 .section-title {
-  font-family: 'Lora', serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
   font-size: 19px; font-weight: 600; color: var(--espresso);
   margin-bottom: 16px; display: flex; align-items: baseline; gap: 8px;
 }
@@ -173,7 +173,7 @@ body {
 /* ── Log entry cards ── */
 .log-card {
   background: var(--warm-white);
-  border-radius: var(--radius); padding: 11px 11px 11px 14px;
+  border-radius: var(--radius); padding: 12px 12px 12px 15px;
   box-shadow: 0 2px 12px var(--shadow);
   margin-bottom: 8px;
   border-left: 4px solid transparent;
@@ -188,19 +188,19 @@ body {
   margin-bottom: 6px;
 }
 .log-kind-label {
-  font-family: 'Lora', serif; font-size: 15px; font-weight: 600;
-  color: var(--espresso);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; font-size: 15px; font-weight: 600;
+  color: var(--espresso); line-height: 1.3;
 }
-.log-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.log-time { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 .log-summary { text-align: right; }
 .log-summary-main { display: block; font-size: 15px; font-weight: 700; color: var(--caramel); }
 .log-summary-main.water-val { color: var(--sky); }
-.log-summary-sub { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.log-summary-sub { display: block; font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 
 /* food rows inside meal card */
 .log-food-row {
   display: flex; align-items: center; gap: 8px;
-  padding: 4px 0; border-bottom: 1px solid var(--latte);
+  padding: 5px 0; border-bottom: 1px solid var(--latte);
 }
 .log-food-row:last-of-type { border-bottom: none; }
 .log-food-name {
@@ -262,7 +262,7 @@ body {
 }
 .empty-icon { font-size: 54px; margin-bottom: 14px; opacity: .65; }
 .empty-title {
-  font-family: 'Lora', serif; font-size: 18px; color: var(--espresso); margin-bottom: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; font-size: 18px; color: var(--espresso); margin-bottom: 6px;
 }
 .empty-sub { font-size: 14px; color: var(--text-muted); }
 
@@ -323,15 +323,7 @@ body {
   padding: 10px 0; border-bottom: 1px solid var(--latte);
   cursor: pointer; user-select: none; position: relative;
 }
-.food-db-row--open { padding-top: 28px; }
-.food-db-edit-btn {
-  position: absolute; top: 6px; right: 0;
-  background: none; border: none; cursor: pointer;
-  font-size: 16px; padding: 4px 6px; opacity: 0.8;
-  border-radius: var(--radius-xs);
-  transition: opacity .15s, background .15s;
-}
-.food-db-edit-btn:hover { opacity: 1; background: var(--cream); }
+
 .food-db-row:last-child { border-bottom: none; }
 .food-db-info { flex: 1; min-width: 0; }
 .food-db-name { font-size: 14px; font-weight: 600; }
@@ -377,7 +369,7 @@ body {
   border-radius: 100px; margin: 0 auto 18px;
 }
 .modal-title {
-  font-family: 'Lora', serif; font-size: 20px; font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; font-size: 20px; font-weight: 600;
   color: var(--espresso); margin-bottom: 18px;
 }
 .modal-section-title {
@@ -566,3 +558,59 @@ body {
 .water-bar-wrap { height: 16px; border-radius: 100px; overflow: hidden; display: flex; margin: 8px 0; }
 .water-bar-food { background: var(--sky); }
 .water-bar-drink { background: #a0d0e8; }
+
+/* ── Log card layout helpers ── */
+.log-card-left { flex: 1; min-width: 0; padding-right: 8px; }
+.log-card-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.log-card-meta-row { display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
+.log-card-meta-row .log-time { margin-top: 0; }
+.log-card-meta-row .log-summary-sub { display: inline; margin-top: 0; font-size: 11px; color: var(--text-muted); }
+
+/* ── Water source badge colors ── */
+.source-bowl      { background: #d0e8f5; color: #10507a; }
+.source-fountain  { background: #c8e8ff; color: #0a4870; }
+.source-syringe   { background: #e8d0f5; color: #5a1080; }
+.source-other     { background: var(--latte); color: var(--mocha); }
+
+/* ── Action Sheet ── */
+.action-sheet-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(4px);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: overlayIn .18s ease;
+}
+.action-sheet {
+  width: 100%; max-width: 430px;
+  background: var(--warm-white);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 8px 12px calc(env(safe-area-inset-bottom) + 12px);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.action-sheet-item {
+  width: 100%; padding: 15px 16px;
+  background: none; border: none; cursor: pointer;
+  font-size: 15px; font-weight: 500; color: var(--espresso);
+  text-align: left; border-radius: var(--radius-xs);
+  display: flex; align-items: center; gap: 10px;
+  transition: background .15s;
+}
+.action-sheet-item:active { background: var(--latte); }
+.action-sheet-item.danger { color: #c0392b; }
+.action-sheet-icon { font-size: 18px; }
+.action-sheet-cancel {
+  width: 100%; padding: 15px 16px; margin-top: 4px;
+  background: var(--latte); border: none; cursor: pointer;
+  font-size: 15px; font-weight: 700; color: var(--mocha);
+  border-radius: var(--radius-xs); transition: background .15s;
+}
+.action-sheet-cancel:active { background: #e0d5c8; }
+
+/* ── Food Detail Sheet ── */
+.food-detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.food-detail-name { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; font-size: 20px; font-weight: 700; color: var(--espresso); }
+.food-detail-brand { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.food-detail-actions { display: flex; gap: 6px; }
+.food-detail-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 14px 0; }
+.food-detail-stat { background: var(--cream); border-radius: var(--radius-xs); padding: 12px; text-align: center; }
+.food-detail-stat-val { font-size: 18px; font-weight: 700; color: var(--espresso); }
+.food-detail-stat-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; }

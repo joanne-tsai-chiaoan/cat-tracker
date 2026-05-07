@@ -266,3 +266,39 @@ export function useConfirmDelete(id, onDelete, delay = 2500) {
   }, [armed, id, onDelete]);
   return { armed, trigger };
 }
+
+// ── useLongPress ──────────────────────────────────────────────────────────────
+// Returns touch/mouse handlers that fire onLongPress after `delay` ms.
+export function useLongPress(onLongPress, delay = 550) {
+  const timer = useRef(null);
+  const clear  = useCallback(() => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } }, []);
+  const start  = useCallback((e) => {
+    // only primary touch/mouse
+    if (e.type === "mousedown" && e.button !== 0) return;
+    timer.current = setTimeout(() => { timer.current = null; onLongPress(); }, delay);
+  }, [onLongPress, delay]);
+  return {
+    onMouseDown:  start, onMouseUp: clear, onMouseLeave: clear,
+    onTouchStart: start, onTouchEnd: clear, onTouchMove: clear,
+  };
+}
+
+// ── ActionSheet ───────────────────────────────────────────────────────────────
+// iOS-style bottom action sheet. items = [{ label, icon?, danger?, onClick }]
+export function ActionSheet({ items, onClose }) {
+  return (
+    <div className="action-sheet-overlay" onClick={onClose}>
+      <div className="action-sheet" onClick={e => e.stopPropagation()}>
+        {items.map(({ label, icon, danger, onClick }) => (
+          <button key={label}
+            className={`action-sheet-item${danger ? " danger" : ""}`}
+            onClick={() => { onClick(); onClose(); }}>
+            {icon && <span className="action-sheet-icon">{icon}</span>}
+            {label}
+          </button>
+        ))}
+        <button className="action-sheet-cancel" onClick={onClose}>Cancel</button>
+      </div>
+    </div>
+  );
+}

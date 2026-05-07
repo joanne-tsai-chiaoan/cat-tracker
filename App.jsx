@@ -227,6 +227,7 @@ export default function App() {
             t={t} foods={foods}
             onAdd={() => setModal("addFood")}
             onEdit={(f) => setModal({ type: "editFood", food: f })}
+            onDelete={id => setFoods(prev => prev.filter(f => f.id !== id))}
           />
         )}
       </main>

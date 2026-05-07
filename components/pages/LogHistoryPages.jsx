@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { fmtTime } from "../../utils.js";
-import { Lightbox, DriveImg, SectionHeader, EmptyState, TabSelector, TypeBadge, useConfirmDelete } from "../ui/index.jsx";
+import { Lightbox, DriveImg, SectionHeader, EmptyState, TabSelector, TypeBadge, useConfirmDelete, ActionSheet, useLongPress } from "../ui/index.jsx";
 import { getPhotoUrl } from "../../storage.js";
 
 // ── LogPage ───────────────────────────────────────────────────────────────────
@@ -21,10 +21,12 @@ export function LogPage({ t, todayLogs, todayKcal, todayWater, todayProtein, onD
 // ── LogCard ───────────────────────────────────────────────────────────────────
 export function LogCard({ log, t, onDelete }) {
   const { armed, trigger } = useConfirmDelete(log.id, onDelete);
-  const [lightbox, setLightbox] = useState(null);
+  const [lightbox, setLightbox]   = useState(null);
+  const [sheet, setSheet]         = useState(false);
+  const longPress = useLongPress(() => setSheet(true));
 
   return (
-    <div className={`log-card kind-${log.kind}`}>
+    <div className={`log-card kind-${log.kind}`} {...longPress}>
       <button
         className={`card-del${armed ? " card-del--confirm" : ""}`}
         onClick={trigger}
@@ -38,6 +40,15 @@ export function LogCard({ log, t, onDelete }) {
       {log.kind === "waste" && <WasteCardBody log={log} t={t} onPhotoClick={setLightbox} />}
 
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
+
+      {sheet && (
+        <ActionSheet
+          onClose={() => setSheet(false)}
+          items={[
+            { label: t.common.delete, icon: "🗑", danger: true, onClick: () => onDelete(log.id) },
+          ]}
+        />
+      )}
     </div>
   );
 }
@@ -49,20 +60,22 @@ function MealCardBody({ log, t, onPhotoClick }) {
   return (
     <>
       <div className="log-card-header">
-        <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+        <div className="log-card-left">
           {isSingle ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <div className="log-card-title-row">
               <TypeBadge type={log.items[0].foodType} label={t.foodDb.types[log.items[0].foodType]} />
-              <span className="log-kind-label" style={{ fontSize: 14 }}>{log.items[0].foodName}</span>
+              <span className="log-kind-label">{log.items[0].foodName}</span>
             </div>
           ) : (
             <div className="log-kind-label">{t.log.mealTypes[log.mealType] || log.mealType}</div>
           )}
-          <div className="log-time">{fmtTime(log.createdAt)}</div>
+          <div className="log-card-meta-row">
+            <span className="log-time">{fmtTime(log.createdAt)}</span>
+            <span className="log-summary-sub">🔥{log.totalKcal.toFixed(0)} · 💪{log.totalProtein.toFixed(1)}g · 💧{log.totalWater.toFixed(0)}ml</span>
+          </div>
         </div>
         <div className="log-summary">
           <span className="log-summary-main">{totalGrams}g</span>
-          <span className="log-summary-sub">🔥{log.totalKcal.toFixed(0)} · 💪{log.totalProtein.toFixed(1)}g · 💧{log.totalWater.toFixed(0)}ml</span>
         </div>
       </div>
 
@@ -93,13 +106,17 @@ function WaterCardBody({ log, t }) {
   return (
     <>
       <div className="log-card-header">
-        <div>
-          <div className="log-kind-label">💧 {tw.title}</div>
-          <div className="log-time">{fmtTime(log.createdAt)}</div>
+        <div className="log-card-left">
+          <div className="log-card-title-row">
+            <span className={`type-badge source-${log.source}`}>{tw.sources[log.source]}</span>
+            <span className="log-kind-label">💧 {tw.title}</span>
+          </div>
+          <div className="log-card-meta-row">
+            <span className="log-time">{fmtTime(log.createdAt)}</span>
+          </div>
         </div>
         <div className="log-summary">
           <span className="log-summary-main water-val">{log.ml} ml</span>
-          <span className="log-summary-sub">{tw.sources[log.source]}</span>
         </div>
       </div>
       {log.note && <div className="log-note">💬 {log.note}</div>}
