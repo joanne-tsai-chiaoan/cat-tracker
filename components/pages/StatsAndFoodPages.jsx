@@ -226,7 +226,8 @@ export function FoodDbPage({ t, foods, onAdd, onEdit }) {
             {grouped[type].map(food => {
               const isOpen = expandedId === food.id;
               return (
-                <div key={food.id} className="food-db-row"
+                <div key={food.id}
+                  className={`food-db-row${isOpen ? " food-db-row--open" : ""}`}
                   onClick={() => setExpandedId(isOpen ? null : food.id)}>
                   <div className="food-db-info">
                     <div className="food-db-name">{food.name}</div>
@@ -242,7 +243,7 @@ export function FoodDbPage({ t, foods, onAdd, onEdit }) {
                     )}
                   </div>
                   {isOpen && (
-                    <button className="btn btn-ghost btn-sm"
+                    <button className="food-db-edit-btn"
                       onClick={e => { e.stopPropagation(); onEdit(food); }}>✏️</button>
                   )}
                 </div>

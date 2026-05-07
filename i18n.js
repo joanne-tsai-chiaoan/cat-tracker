@@ -24,7 +24,7 @@ export const LANGS = {
     },
 
     water: {
-      title: "喝水紀錄", sub: "Water Intake",
+      title: "喝水", sub: "Water Intake",
       amount: "水量 (ml)", amountPlaceholder: "輸入 ml",
       source: "水源",
       sources: { bowl: "水碗", fountain: "飲水機", syringe: "針筒餵水", other: "其他" },
@@ -133,7 +133,7 @@ export const LANGS = {
     },
 
     water: {
-      title: "Water Intake", sub: "Hydration Log",
+      title: "Water", sub: "Hydration Log",
       amount: "Amount (ml)", amountPlaceholder: "Enter ml",
       source: "Source",
       sources: { bowl: "Water bowl", fountain: "Fountain", syringe: "Syringe", other: "Other" },
