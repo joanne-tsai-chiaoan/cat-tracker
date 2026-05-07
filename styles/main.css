@@ -31,7 +31,6 @@ body {
   font-family: 'Nunito', sans-serif;
   color: var(--text);
   height: 100dvh;
-  overflow: hidden;           /* scroll lives in .page only */
   -webkit-font-smoothing: antialiased;
 }
 #root {
@@ -40,7 +39,6 @@ body {
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  overflow: hidden;
 }
 
 /* ── App shell ── */
@@ -126,9 +124,10 @@ body {
 /* ── Page ── */
 .page {
   flex: 1;
+  min-height: 0;                            /* critical: lets flex child shrink below content size */
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;        /* smooth momentum scroll on iOS */
-  overscroll-behavior-y: contain;           /* elastic bounce within page, not body */
+  -webkit-overflow-scrolling: touch;        /* momentum scroll on iOS */
+  overscroll-behavior-y: contain;           /* elastic bounce within page */
   padding: 16px 16px calc(80px + env(safe-area-inset-bottom));
   animation: fadeUp .22s ease;
 }
