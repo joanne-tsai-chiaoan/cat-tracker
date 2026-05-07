@@ -2,31 +2,35 @@
 
 import { useState } from "react";
 import { fmtTime } from "../../utils.js";
-import { Lightbox, DriveImg, SectionHeader, EmptyState, TabSelector, TypeBadge, useConfirmDelete, ActionSheet, useLongPress } from "../ui/index.jsx";
+import { Lightbox, DriveImg, SectionHeader, EmptyState, TabSelector, TypeBadge, useConfirmDelete, ActionSheet } from "../ui/index.jsx";
 import { getPhotoUrl } from "../../storage.js";
 
 // ── LogPage ───────────────────────────────────────────────────────────────────
-export function LogPage({ t, todayLogs, todayKcal, todayWater, todayProtein, onDelete }) {
+export function LogPage({ t, todayLogs, todayKcal, todayWater, todayProtein, onDelete, onEdit }) {
   return (
     <div>
       <SectionHeader title={t.log.title} subtitle={t.log.sub} />
       {!todayLogs.length
         ? <EmptyState icon="🐾" title={t.log.noLog} subtitle={t.log.noLogSub} />
-        : todayLogs.map(log => <LogCard key={log.id} log={log} t={t} onDelete={onDelete} />)
+        : todayLogs.map(log => <LogCard key={log.id} log={log} t={t} onDelete={onDelete} onEdit={onEdit} />)
       }
     </div>
   );
 }
 
 // ── LogCard ───────────────────────────────────────────────────────────────────
-export function LogCard({ log, t, onDelete }) {
+export function LogCard({ log, t, onDelete, onEdit }) {
   const { armed, trigger } = useConfirmDelete(log.id, onDelete);
-  const [lightbox, setLightbox]   = useState(null);
-  const [sheet, setSheet]         = useState(false);
-  const longPress = useLongPress(() => setSheet(true));
+  const [lightbox, setLightbox] = useState(null);
+  const [sheet,    setSheet]    = useState(false);
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setSheet(true);
+  };
 
   return (
-    <div className={`log-card kind-${log.kind}`} {...longPress}>
+    <div className={`log-card kind-${log.kind}`} onContextMenu={handleContextMenu}>
       <button
         className={`card-del${armed ? " card-del--confirm" : ""}`}
         onClick={trigger}
@@ -45,8 +49,9 @@ export function LogCard({ log, t, onDelete }) {
         <ActionSheet
           onClose={() => setSheet(false)}
           items={[
+            onEdit && { label: t.common.edit, icon: "✏️", onClick: () => onEdit(log) },
             { label: t.common.delete, icon: "🗑", danger: true, onClick: () => onDelete(log.id) },
-          ]}
+          ].filter(Boolean)}
         />
       )}
     </div>
@@ -180,7 +185,7 @@ function PhotoStrip({ log, onPhotoClick }) {
 }
 
 // ── HistoryPage ───────────────────────────────────────────────────────────────
-export function HistoryPage({ t, logs, onDelete }) {
+export function HistoryPage({ t, logs, onDelete, onEdit }) {
   const [filter, setFilter] = useState("all");
 
   const filtered = filter === "all" ? logs : logs.filter(l => l.kind === filter);
@@ -213,7 +218,7 @@ export function HistoryPage({ t, logs, onDelete }) {
             <div key={date}>
               <div className="date-label">{date}</div>
               {grouped[date].map(log => (
-                <LogCard key={log.id} log={log} t={t} onDelete={onDelete} />
+                <LogCard key={log.id} log={log} t={t} onDelete={onDelete} onEdit={onEdit} />
               ))}
             </div>
           ))

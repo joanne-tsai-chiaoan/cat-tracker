@@ -28,6 +28,7 @@ export default function App() {
   const [logs,       setLogs]       = useState(() => loadLogs());
   const [tab,        setTab]        = useState("log");
   const [modal,      setModal]      = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
   const [syncStatus, setSyncStatus] = useState(() => isSignedIn() ? "syncing" : "idle");
   // syncStatus: "idle" | "syncing" | "ok" | "error"
 
@@ -125,6 +126,20 @@ export default function App() {
 
   const deleteLog = (id) => setLogs(prev => prev.filter(l => l.id !== id));
 
+  const updateLog = (entry) => {
+    setLogs(prev => prev.map(l =>
+      l.id === editTarget.id
+        ? { ...entry, id: editTarget.id, createdAt: editTarget.createdAt }
+        : l
+    ));
+    setEditTarget(null);
+  };
+
+  const handleEditLog = (log) => {
+    setEditTarget(log);
+    setModal("edit" + log.kind.charAt(0).toUpperCase() + log.kind.slice(1)); // "editMeal", "editWater", "editWaste"
+  };
+
   // ── Food mutations ──
   const addFood    = (food) => setFoods(prev => [{ ...food, id: uid() }, ...prev]);
   const updateFood = (food) => setFoods(prev => prev.map(f => f.id === food.id ? food : f));
@@ -212,12 +227,12 @@ export default function App() {
             <LogPage
               t={t} todayLogs={todayLogs}
               todayKcal={todayKcal} todayWater={todayWater} todayProtein={todayProtein}
-              onDelete={deleteLog}
+              onDelete={deleteLog} onEdit={handleEditLog}
             />
           </>
         )}
         {tab === "history" && (
-          <HistoryPage t={t} logs={logs} onDelete={deleteLog} />
+          <HistoryPage t={t} logs={logs} onDelete={deleteLog} onEdit={handleEditLog} />
         )}
         {tab === "stats" && (
           <StatsPage t={t} logs={logs} foods={foods} />
@@ -261,6 +276,21 @@ export default function App() {
       {modal === "addWaste" && (
         <AddWasteModal t={t}
           onSave={(e) => { addLog(e); closeModal(); }}
+          onClose={closeModal} />
+      )}
+      {modal === "editMeal" && editTarget && (
+        <AddMealModal t={t} foods={foods} initial={editTarget}
+          onSave={entry => { updateLog(entry); closeModal(); }}
+          onClose={closeModal} />
+      )}
+      {modal === "editWater" && editTarget && (
+        <AddWaterModal t={t} initial={editTarget}
+          onSave={entry => { updateLog(entry); closeModal(); }}
+          onClose={closeModal} />
+      )}
+      {modal === "editWaste" && editTarget && (
+        <AddWasteModal t={t} initial={editTarget}
+          onSave={entry => { updateLog(entry); closeModal(); }}
           onClose={closeModal} />
       )}
       {modal === "addFood" && (

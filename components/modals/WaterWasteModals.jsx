@@ -6,15 +6,15 @@ import { ModalShell, FormInput, PillSelector, PhotoPicker, useFormState } from "
 
 // ── AddWaterModal ─────────────────────────────────────────────────────────────
 
-export function AddWaterModal({ t, onSave, onClose }) {
-  const [amount, setAmount] = useState("");
-  const [source, setSource] = useState("bowl");
-  const [note,   setNote]   = useState("");
+export function AddWaterModal({ t, initial, onSave, onClose }) {
+  const [amount, setAmount] = useState(initial?.ml?.toString() || "");
+  const [source, setSource] = useState(initial?.source || "bowl");
+  const [note,   setNote]   = useState(initial?.note   || "");
 
   const handleSave = () => {
     const ml = parseFloat(amount);
     if (!ml || ml <= 0) return;
-    onSave({ kind: "water", date: today(), ml, source, note });
+    onSave({ kind: "water", date: initial?.date || today(), ml, source, note });
   };
 
   return (
@@ -123,10 +123,18 @@ function PeeForm({ t, form, set }) {
   );
 }
 
-export function AddWasteModal({ t, onSave, onClose }) {
-  const [wasteType, setWasteType] = useState("poop");
-  const [poopForm,  setPoopField] = useFormState({ color: "brown", consistency: "normal", note: "", photos: [] });
-  const [peeForm,   setPeeField]  = useFormState({ clumps: "", diameter: "", color: "normal", note: "", photos: [] });
+export function AddWasteModal({ t, initial, onSave, onClose }) {
+  const [wasteType, setWasteType] = useState(initial?.wasteType || "poop");
+  const [poopForm,  setPoopField] = useFormState(
+    initial?.wasteType === "poop"
+      ? { color: initial.color || "brown", consistency: initial.consistency || "normal", note: initial.note || "", photos: initial.photos || [] }
+      : { color: "brown", consistency: "normal", note: "", photos: [] }
+  );
+  const [peeForm,   setPeeField]  = useFormState(
+    initial?.wasteType === "pee"
+      ? { clumps: initial.clumps?.toString() || "", diameter: initial.diameter?.toString() || "", color: initial.color || "normal", note: initial.note || "", photos: initial.photos || [] }
+      : { clumps: "", diameter: "", color: "normal", note: "", photos: [] }
+  );
 
   const handleSave = () => {
     const base = { kind: "waste", date: today(), wasteType };
