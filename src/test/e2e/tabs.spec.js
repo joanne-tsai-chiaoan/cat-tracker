@@ -19,7 +19,7 @@ async function switchTab(page, label) {
   await page.getByRole('button', { name: label }).click();
   // Wait for either section-title or empty-state — both mean React rendered OK
   await expect(
-    page.locator('.section-title, .empty-state')
+    page.locator('.section-title, .empty-state').first()
   ).toBeVisible({ timeout: 5_000 });
 }
 
@@ -44,7 +44,7 @@ test.describe('App smoke — all tabs render', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     // Wait for React to hydrate — either section-title or empty-state means it rendered
-    await expect(page.locator('.section-title, .empty-state')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.section-title, .empty-state').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('Log tab (default) is non-blank', async ({ page }) => {
@@ -75,7 +75,7 @@ test.describe('App smoke — all tabs render', () => {
     await noConsoleErrors(page, async () => {
       for (const label of ['歷史', '統計', '糧食庫', '今日']) {
         await page.getByRole('button', { name: label }).click();
-        await expect(page.locator('.section-title, .empty-state')).toBeVisible();
+        await expect(page.locator('.section-title, .empty-state').first()).toBeVisible();
       }
     });
   });
@@ -94,7 +94,7 @@ test.describe('Bottom nav accessibility', () => {
 test.describe('Add log modal smoke', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.section-title, .empty-state')).toBeVisible();
+    await expect(page.locator('.section-title, .empty-state').first()).toBeVisible();
   });
 
   test('FAB opens and modal appears', async ({ page }) => {
