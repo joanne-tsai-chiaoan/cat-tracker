@@ -15,29 +15,31 @@ export function StatsPage({ t, logs, foods }) {
   const poopLogs  = wasteLogs.filter(l => l.wasteType === "poop");
   const peeLogs   = wasteLogs.filter(l => l.wasteType === "pee");
 
-  if (!logs.length) return (
-    <div className="empty-state">
-      <div className="empty-icon">📊</div>
-      <div className="empty-title">{ts.noData}</div>
-    </div>
-  );
-
   return (
     <div>
       <div className="section-title">
         {ts.title} <span className="section-sub">{ts.sub}</span>
       </div>
 
-      <div className="stats-tabs">
-        {[["nutrition", ts.tabNutrition], ["water", ts.tabWater], ["waste", ts.tabWaste]].map(([k, v]) => (
-          <button key={k} className={`stats-tab${tab === k ? " active" : ""}`}
-            onClick={() => setTab(k)}>{v}</button>
-        ))}
-      </div>
+      {!logs.length ? (
+        <div className="empty-state">
+          <div className="empty-icon">📊</div>
+          <div className="empty-title">{ts.noData}</div>
+        </div>
+      ) : (
+        <>
+          <div className="stats-tabs">
+            {[["nutrition", ts.tabNutrition], ["water", ts.tabWater], ["waste", ts.tabWaste]].map(([k, v]) => (
+              <button key={k} className={`stats-tab${tab === k ? " active" : ""}`}
+                onClick={() => setTab(k)}>{v}</button>
+            ))}
+          </div>
 
-      {tab === "nutrition" && <NutritionTab t={t} mealLogs={mealLogs} />}
-      {tab === "water"     && <WaterTab     t={t} mealLogs={mealLogs} waterLogs={waterLogs} />}
-      {tab === "waste"     && <WasteTab     t={t} poopLogs={poopLogs} peeLogs={peeLogs} />}
+          {tab === "nutrition" && <NutritionTab t={t} mealLogs={mealLogs} />}
+          {tab === "water"     && <WaterTab     t={t} mealLogs={mealLogs} waterLogs={waterLogs} />}
+          {tab === "waste"     && <WasteTab     t={t} poopLogs={poopLogs} peeLogs={peeLogs} />}
+        </>
+      )}
     </div>
   );
 }

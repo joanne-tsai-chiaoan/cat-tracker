@@ -11,11 +11,16 @@ import { test, expect } from '@playwright/test';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Click the nav tab labelled `name` and assert the page is non-blank. */
+/** Click the nav tab labelled `name` and assert the page is non-blank.
+ *  Each tab renders either .section-title (has data) or .empty-state (no data).
+ *  Both are valid — neither is a blank page.
+ */
 async function switchTab(page, label) {
   await page.getByRole('button', { name: label }).click();
-  // App renders a section-title on every tab — presence = non-blank
-  await expect(page.locator('.section-title')).toBeVisible({ timeout: 5_000 });
+  // Wait for either section-title or empty-state — both mean React rendered OK
+  await expect(
+    page.locator('.section-title, .empty-state')
+  ).toBeVisible({ timeout: 5_000 });
 }
 
 /** Confirm no JS errors were thrown during the action. */
@@ -38,8 +43,8 @@ async function noConsoleErrors(page, fn) {
 test.describe('App smoke — all tabs render', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    // Wait for React to hydrate (section-title is rendered by all pages)
-    await expect(page.locator('.section-title')).toBeVisible({ timeout: 10_000 });
+    // Wait for React to hydrate — either section-title or empty-state means it rendered
+    await expect(page.locator('.section-title, .empty-state')).toBeVisible({ timeout: 10_000 });
   });
 
   test('Log tab (default) is non-blank', async ({ page }) => {
@@ -70,7 +75,7 @@ test.describe('App smoke — all tabs render', () => {
     await noConsoleErrors(page, async () => {
       for (const label of ['歷史', '統計', '糧食庫', '今日']) {
         await page.getByRole('button', { name: label }).click();
-        await expect(page.locator('.section-title')).toBeVisible();
+        await expect(page.locator('.section-title, .empty-state')).toBeVisible();
       }
     });
   });
@@ -89,7 +94,7 @@ test.describe('Bottom nav accessibility', () => {
 test.describe('Add log modal smoke', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.section-title')).toBeVisible();
+    await expect(page.locator('.section-title, .empty-state')).toBeVisible();
   });
 
   test('FAB opens and modal appears', async ({ page }) => {
