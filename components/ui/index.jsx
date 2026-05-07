@@ -1,6 +1,6 @@
-// components/ui/index.jsx — shared UI primitives
+// components/ui/index.jsx — shared UI primitives and hooks
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { readFileAsDataUrl } from "../../utils.js";
 import { getPhotoUrl } from "../../storage.js";
 
@@ -136,4 +136,133 @@ export function ConfirmDelete({ label, onConfirm, onCancel }) {
       <button className="btn btn-ghost btn-sm" onClick={onCancel}>✕</button>
     </>
   );
+}
+
+// ── ModalShell ────────────────────────────────────────────────────────────────
+// Wraps every modal: overlay click-to-close, handle bar, title, save + close buttons.
+export function ModalShell({ title, onClose, onSave, saveLabel, closeLabel, saveDisabled, saveColor, children }) {
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-handle" />
+        <div className="modal-title">{title}</div>
+        {children}
+        <button className="btn btn-primary btn-full"
+          style={saveColor ? { background: saveColor } : undefined}
+          onClick={onSave} disabled={saveDisabled}>
+          {saveLabel}
+        </button>
+        <button className="btn btn-ghost btn-full" style={{ marginTop: 8 }} onClick={onClose}>
+          {closeLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── FormInput ─────────────────────────────────────────────────────────────────
+// form-group + label + input/select/textarea in one component.
+// Pass `as="select"` or `as="textarea"` to render different elements.
+// Pass `className` for extra classes (e.g. "form-select" for <select>).
+// Pass `hint` for a helper paragraph below the field.
+// Children are forwarded to the element (for <select> options).
+export function FormInput({ label, hint, as: Tag = "input", className = "", children, ...props }) {
+  return (
+    <div className="form-group">
+      {label && <label className="form-label">{label}</label>}
+      <Tag className={`form-input${className ? ` ${className}` : ""}`} {...props}>
+        {children}
+      </Tag>
+      {hint && <p className="form-hint">{hint}</p>}
+    </div>
+  );
+}
+
+// ── PillSelector ──────────────────────────────────────────────────────────────
+// form-group + label + pill-row of toggle buttons.
+// `options` is { key: label }. `colorClass` appended to "pill pill-{color}".
+// Omit colorClass for the plain "pill" style (no colour variant).
+export function PillSelector({ label, options, value, onChange, colorClass }) {
+  const base = colorClass ? `pill pill-${colorClass}` : "pill";
+  return (
+    <div className="form-group">
+      {label && <label className="form-label">{label}</label>}
+      <div className="pill-row">
+        {Object.entries(options).map(([k, v]) => (
+          <button key={k}
+            className={`${base}${value === k ? " pill-active" : ""}`}
+            onClick={() => onChange(k)}>{v}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── EmptyState ────────────────────────────────────────────────────────────────
+export function EmptyState({ icon, title, subtitle }) {
+  return (
+    <div className="empty-state">
+      <div className="empty-icon">{icon}</div>
+      <div className="empty-title">{title}</div>
+      {subtitle && <div className="empty-sub">{subtitle}</div>}
+    </div>
+  );
+}
+
+// ── SectionHeader ─────────────────────────────────────────────────────────────
+export function SectionHeader({ title, subtitle }) {
+  return (
+    <div className="section-title">
+      {title}{subtitle && <span className="section-sub"> {subtitle}</span>}
+    </div>
+  );
+}
+
+// ── TabSelector ───────────────────────────────────────────────────────────────
+// Generic tab bar. `tabs` is [[key, label], ...].
+// containerClass / itemClass map to the caller's CSS (e.g. "stats-tabs" / "stats-tab").
+export function TabSelector({ tabs, active, onChange, containerClass, itemClass }) {
+  return (
+    <div className={containerClass}>
+      {tabs.map(([k, label]) => (
+        <button key={k} className={`${itemClass}${active === k ? " active" : ""}`}
+          onClick={() => onChange(k)}>{label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── TypeBadge ─────────────────────────────────────────────────────────────────
+export function TypeBadge({ type, label }) {
+  return <span className={`type-badge type-${type}`}>{label}</span>;
+}
+
+// ── useFormState ──────────────────────────────────────────────────────────────
+// Flat-object form state with a stable single-key setter and a multi-key patch.
+// Returns [form, set(key, value), patch(partialObject)].
+export function useFormState(initial) {
+  const [form, setForm] = useState(initial);
+  const set   = useCallback((k, v)   => setForm(prev => ({ ...prev, [k]: v })),    []);
+  const patch  = useCallback(partial => setForm(prev => ({ ...prev, ...partial })), []);
+  return [form, set, patch];
+}
+
+// ── useConfirmDelete ──────────────────────────────────────────────────────────
+// Two-tap delete pattern: first tap arms (shows confirm UI), second tap fires onDelete(id).
+// Auto-disarms after `delay` ms if the second tap does not arrive.
+// Returns { armed, trigger }.
+export function useConfirmDelete(id, onDelete, delay = 2500) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), delay);
+    return () => clearTimeout(t);
+  }, [armed, delay]);
+  const trigger = useCallback(() => {
+    if (armed) onDelete(id);
+    else setArmed(true);
+  }, [armed, id, onDelete]);
+  return { armed, trigger };
 }
