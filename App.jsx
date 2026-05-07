@@ -7,7 +7,7 @@ import { SAMPLE_FOODS } from "./constants.js";
 import {
   loadLang, loadProfile, loadFoods, loadLogs,
   saveLang, saveProfile, saveFoods, saveLogs,
-  syncFromDrive, syncToDrive, mergeLogs,
+  syncFromDrive, syncToDrive, mergeLogs, mergeFoods,
 } from "./storage.js";
 import { isSignedIn, signIn, signOut, onTokenChange, tryAutoRefresh } from "./auth.js";
 import { uploadPhoto } from "./drive.js";
@@ -67,7 +67,7 @@ export default function App() {
       if (data) {
         if (data.lang)    setLang(data.lang);
         if (data.profile) setProfile(data.profile);
-        if (data.foods)   setFoods(data.foods);
+        if (data.foods)   setFoods(prev => mergeFoods(prev, data.foods));
         if (data.logs)    setLogs(prev => mergeLogs(prev, data.logs));
       } else {
         // No Drive file yet — push local data now
@@ -89,7 +89,7 @@ export default function App() {
         if (data) {
           if (data.lang)    setLang(data.lang);
           if (data.profile) setProfile(data.profile);
-          if (data.foods)   setFoods(data.foods);
+          if (data.foods)   setFoods(prev => mergeFoods(prev, data.foods));
           if (data.logs)    setLogs(prev => mergeLogs(prev, data.logs));
         } else {
           // First-ever sign-in — push local data immediately
