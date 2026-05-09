@@ -250,11 +250,11 @@ export function FoodDbPage({ t, foods, onAdd, onEdit, onDelete }) {
 function FoodRow({ food, t, onTap, onEdit, onDelete }) {
   const tf = t.foodDb;
   const [sheet, setSheet] = useState(false);
-  const longPress = useLongPress(() => setSheet(true));
+  const { pressing: _pressing, ...longPressHandlers } = useLongPress(() => setSheet(true));
 
   return (
     <>
-      <div className="food-db-row" onClick={onTap} {...longPress}>
+      <div className="food-db-row" onClick={onTap} {...longPressHandlers}>
         <div className="food-db-info">
           <div className="food-db-name">{food.name}</div>
           <div className="food-db-meta">
