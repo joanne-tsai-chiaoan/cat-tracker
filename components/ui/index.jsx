@@ -273,26 +273,41 @@ export function useConfirmDelete(id, onDelete, delay = 2500) {
 // CSS on the element must include: -webkit-touch-callout: none; user-select: none;
 export function useLongPress(onLongPress, delay = 550) {
   const timer    = useRef(null);
+  const hasFired = useRef(false);
   const [pressing, setPressing] = useState(false);
+
   const cancel = useCallback(() => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
     setPressing(false);
+    hasFired.current = false;
   }, []);
+
   const start = useCallback(() => {
     cancel();
     setPressing(true);
     timer.current = setTimeout(() => {
       timer.current = null;
       setPressing(false);
+      hasFired.current = true;
       onLongPress();
     }, delay);
   }, [onLongPress, delay, cancel]);
+
   return {
     pressing,
     onTouchStart:  start,
     onTouchEnd:    cancel,
+    onTouchCancel: cancel,
     onTouchMove:   cancel,
-    onContextMenu: (e) => { e.preventDefault(); onLongPress(); },
+    // onContextMenu handles desktop right-click; hasFired prevents double-fire
+    // when the OS also fires contextmenu on mobile long-press
+    onContextMenu: (e) => {
+      e.preventDefault();
+      if (hasFired.current) return;
+      hasFired.current = true;
+      cancel();
+      onLongPress();
+    },
   };
 }
 
