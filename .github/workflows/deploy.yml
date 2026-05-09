@@ -77,15 +77,13 @@ jobs:
 
       - run: npm ci
 
-      - name: Build app
-        run: npm run build
-
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
+          install: false
+          build: npm run build
           start: npm run preview
           wait-on: "http://localhost:4173"
-          command: npm run test:cypress
 
       - uses: actions/upload-artifact@v4
         if: failure()
