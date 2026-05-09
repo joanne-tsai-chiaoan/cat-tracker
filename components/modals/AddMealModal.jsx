@@ -13,6 +13,8 @@ export function AddMealModal({ t, foods, initial, onSave, onClose }) {
   const [addingFood, setAddingFood] = useState(false);
   const [selFoodId, setSelFoodId] = useState(foods[0]?.id || "");
   const [grams, setGrams] = useState("");
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editGrams, setEditGrams] = useState("");
 
   const foodsMap = Object.fromEntries(foods.map(f => [f.id, f]));
 
@@ -38,6 +40,20 @@ export function AddMealModal({ t, foods, initial, onSave, onClose }) {
     if (item) setItems(prev => [...prev, item]);
     setGrams("");
     setAddingFood(false);
+  };
+
+  const startEditItem = (i) => {
+    setEditingIndex(i);
+    setEditGrams(items[i].grams.toString());
+  };
+
+  const confirmEditItem = () => {
+    const g = parseFloat(editGrams);
+    if (!g || g <= 0) return;
+    const updated = calcItem(items[editingIndex].foodId, g);
+    if (updated) setItems(prev => prev.map((it, j) => j === editingIndex ? updated : it));
+    setEditingIndex(null);
+    setEditGrams("");
   };
 
   const totalKcal         = items.reduce((s, i) => s + i.kcal,         0);
@@ -71,11 +87,29 @@ export function AddMealModal({ t, foods, initial, onSave, onClose }) {
       <div className="form-group">
         <label className="form-label">{t.log.addFood}</label>
         {items.map((item, i) => (
-          <div key={i} className="meal-row">
-            <span className={`type-badge type-${item.foodType}`}>{t.foodDb.types[item.foodType]}</span>
-            <span className="meal-row-name">{item.foodName}</span>
-            <span className="meal-row-meta">{item.grams}g · {item.kcal.toFixed(0)}kcal</span>
-            <button className="del-btn" onClick={() => setItems(prev => prev.filter((_, j) => j !== i))}>✕</button>
+          <div key={i}>
+            {editingIndex === i ? (
+              <div className="meal-row meal-row--editing">
+                <span className={`type-badge type-${item.foodType}`}>{t.foodDb.types[item.foodType]}</span>
+                <span className="meal-row-name">{item.foodName}</span>
+                <input
+                  className="form-input meal-row-edit-input"
+                  type="number" min="0" autoFocus
+                  value={editGrams}
+                  onChange={e => setEditGrams(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") confirmEditItem(); if (e.key === "Escape") setEditingIndex(null); }}
+                />
+                <button className="btn btn-primary btn-sm" onClick={confirmEditItem}>✓</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditingIndex(null)}>✕</button>
+              </div>
+            ) : (
+              <div className="meal-row meal-row--tappable" onClick={() => startEditItem(i)}>
+                <span className={`type-badge type-${item.foodType}`}>{t.foodDb.types[item.foodType]}</span>
+                <span className="meal-row-name">{item.foodName}</span>
+                <span className="meal-row-meta">{item.grams}g · {item.kcal.toFixed(0)}kcal</span>
+                <button className="del-btn" onClick={e => { e.stopPropagation(); setItems(prev => prev.filter((_, j) => j !== i)); }}>✕</button>
+              </div>
+            )}
           </div>
         ))}
 
