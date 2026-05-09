@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { LANGS } from "./i18n.js";
-import { uid, today } from "./utils.js";
+import { uid, today, enrichLog } from "./utils.js";
 import { SAMPLE_FOODS } from "./constants.js";
 import {
   loadLang, loadProfile, loadFoods, loadLogs, loadTrash,
@@ -164,48 +164,31 @@ export default function App() {
   };
 
   // ── Food mutations ──
-  const addFood = (food) => setFoods(prev => [{ ...food, id: uid() }, ...prev]);
-  const updateFood = (food) => {
-    setFoods(prev => prev.map(f => f.id === food.id ? food : f));
-    const patchMealLog = (log) => {
-      if (log.kind !== "meal" || !log.items) return log;
-      let changed = false;
-      const next = log.items.map(item => {
-        if (item.foodId !== food.id) return item;
-        changed = true;
-        return {
-          ...item,
-          foodName:     food.name,
-          foodType:     food.type,
-          foodSubtype:  food.subtype,
-          kcal:         +((food.kcalPer100g    * item.grams) / 100).toFixed(2),
-          protein:      +((food.proteinPer100g * item.grams) / 100).toFixed(2),
-          waterFromFood:+(((food.waterPer100g ?? 0) * item.grams) / 100).toFixed(2),
-        };
-      });
-      if (!changed) return log;
-      const totalKcal          = next.reduce((s, i) => s + i.kcal,          0);
-      const totalProtein       = next.reduce((s, i) => s + i.protein,       0);
-      const totalWaterFromFood = next.reduce((s, i) => s + i.waterFromFood, 0);
-      const totalWater         = totalWaterFromFood + (log.extraWaterMl || 0);
-      return { ...log, items: next, totalKcal, totalProtein, totalWater, totalWaterFromFood };
-    };
-    setLogs(prev => prev.map(patchMealLog));
-    setTrash(prev => prev.map(patchMealLog));
-  };
+  const addFood  = (food) => setFoods(prev => [{ ...food, id: uid() }, ...prev]);
+  // Updating a food is enough — enrichedLogs recomputes automatically from the new food data.
+  const updateFood = (food) => setFoods(prev => prev.map(f => f.id === food.id ? food : f));
 
-  // ── Today's derived data (memoised — only recomputes when logs change) ──
+  // ── Derived data: enrich logs at read time, never at write time ──
+  // foodsMap and enrichedLogs/enrichedTrash are memos that recompute whenever
+  // foods or logs change — this is the single source of truth for all nutrition data.
+  const foodsMap = useMemo(
+    () => Object.fromEntries(foods.map(f => [f.id, f])),
+    [foods]
+  );
+  const enrichedLogs  = useMemo(() => logs.map(l  => enrichLog(l,  foodsMap)), [logs,  foodsMap]);
+  const enrichedTrash = useMemo(() => trash.map(l => enrichLog(l, foodsMap)), [trash, foodsMap]);
+
   const { todayLogs, todayKcal, todayProtein, todayWater } = useMemo(() => {
-    const todayLogs  = logs.filter(l => l.date === today());
-    const meals      = todayLogs.filter(l => l.kind === "meal");
-    const waters     = todayLogs.filter(l => l.kind === "water");
-    const todayKcal    = meals.reduce((s, l) => s + (l.totalKcal    || 0), 0);
-    const todayProtein = meals.reduce((s, l) => s + (l.totalProtein || 0), 0);
+    const todayLogs    = enrichedLogs.filter(l => l.date === today());
+    const meals        = todayLogs.filter(l => l.kind === "meal");
+    const waters       = todayLogs.filter(l => l.kind === "water");
+    const todayKcal    = meals.reduce( (s, l) => s + (l.totalKcal    || 0), 0);
+    const todayProtein = meals.reduce( (s, l) => s + (l.totalProtein || 0), 0);
     const todayWater   =
       meals.reduce( (s, l) => s + (l.totalWater || 0), 0) +
       waters.reduce((s, l) => s + (l.ml         || 0), 0);
     return { todayLogs, todayKcal, todayProtein, todayWater };
-  }, [logs]);
+  }, [enrichedLogs]);
 
   const closeModal = () => setModal(null);
 
@@ -289,10 +272,10 @@ export default function App() {
           </>
         )}
         {tab === "history" && (
-          <HistoryPage t={t} foods={foods} logs={logs} onTrash={trashLog} onPatch={patchLog} />
+          <HistoryPage t={t} foods={foods} logs={enrichedLogs} onTrash={trashLog} onPatch={patchLog} />
         )}
         {tab === "stats" && (
-          <StatsPage t={t} logs={logs} foods={foods} />
+          <StatsPage t={t} logs={enrichedLogs} foods={foods} />
         )}
         {tab === "food" && (
           <FoodDbPage
@@ -367,7 +350,7 @@ export default function App() {
       )}
       {modal === "trash" && (
         <TrashModal
-          t={t} trash={trash}
+          t={t} trash={enrichedTrash}
           onRecover={recoverLog}
           onDelete={permanentDeleteLog}
           onClose={closeModal}

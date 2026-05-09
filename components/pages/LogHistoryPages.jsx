@@ -50,36 +50,15 @@ export function LogCard({ log, t, foods, onTrash, onPatch }) {
     if (!editMode) return;
     let updated = log;
     if (log.kind === "meal") {
-      const foodsMap = Object.fromEntries((foods || []).map(f => [f.id, f]));
-      const newItems = log.items.map((item, i) => {
-        const ng     = parseFloat(editGrams[i]) || item.grams;
-        const foodId = editFoodId[i] ?? item.foodId;
-        const food   = foodsMap[foodId];
-        if (food) {
-          return {
-            ...item,
-            foodId:       food.id,
-            foodName:     food.name,
-            foodType:     food.type,
-            foodSubtype:  food.subtype,
-            grams:        ng,
-            kcal:         +((food.kcalPer100g    * ng) / 100).toFixed(2),
-            protein:      +((food.proteinPer100g * ng) / 100).toFixed(2),
-            waterFromFood:+(((food.waterPer100g ?? 0) * ng) / 100).toFixed(2),
-          };
-        }
-        const ratio = ng / item.grams;
-        return { ...item, grams: ng, kcal: +(item.kcal * ratio).toFixed(2), protein: +(item.protein * ratio).toFixed(2), waterFromFood: +(item.waterFromFood * ratio).toFixed(2) };
-      });
-      const totalKcal          = newItems.reduce((s, i) => s + i.kcal,          0);
-      const totalProtein       = newItems.reduce((s, i) => s + i.protein,       0);
-      const totalWaterFromFood = newItems.reduce((s, i) => s + i.waterFromFood, 0);
-      const totalWater         = totalWaterFromFood + (log.extraWaterMl || 0);
-      updated = { ...log, items: newItems, totalKcal, totalProtein, totalWater, totalWaterFromFood };
+      // Store only user inputs — enrichLog recomputes nutrition at read time
+      const cleanItems = log.items.map((item, i) => ({
+        foodId: editFoodId[i] ?? item.foodId,
+        grams:  parseFloat(editGrams[i]) || item.grams,
+      }));
+      updated = { ...log, items: cleanItems };
     }
     if (log.kind === "water") {
-      const ml = parseFloat(editMl) || log.ml;
-      updated = { ...log, ml };
+      updated = { ...log, ml: parseFloat(editMl) || log.ml };
     }
     onPatch(updated);
     setEditMode(false);

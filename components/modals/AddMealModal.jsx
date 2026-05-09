@@ -65,7 +65,9 @@ export function AddMealModal({ t, foods, initial, onSave, onClose }) {
 
   const handleSave = () => {
     if (!items.length) return;
-    onSave({ kind: "meal", date: today(), mealType, items, totalKcal, totalProtein, totalWaterFromFood, extraWaterMl: extraWater, totalWater, note, photos });
+    // Store only user inputs — nutrition is derived at read time from the food DB
+    const cleanItems = items.map(({ foodId, grams }) => ({ foodId, grams }));
+    onSave({ kind: "meal", date: today(), mealType, items: cleanItems, extraWaterMl: extraWater, note, photos });
   };
 
   return (
