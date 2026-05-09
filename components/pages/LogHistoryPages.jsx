@@ -104,9 +104,9 @@ export function LogCard({ log, t, onTrash, onPatch }) {
         <CenterMenu
           onClose={() => setMenu(false)}
           items={[
-            { label: t.common.edit,   icon: "✏️",  onClick: enterEdit },
-            { label: t.common.delete, icon: "🗑",  danger: true, onClick: () => onTrash(log) },
-            { label: t.trash?.changeTime ?? "Change Time", icon: "🕐", disabled: true, onClick: () => {} },
+            { label: t.common.edit,   onClick: enterEdit },
+            { label: t.common.delete, danger: true, onClick: () => onTrash(log) },
+            { label: t.trash?.changeTime ?? "Change Time", disabled: true, onClick: () => {} },
           ]}
         />
       )}

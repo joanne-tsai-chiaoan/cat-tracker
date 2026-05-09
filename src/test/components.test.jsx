@@ -34,7 +34,8 @@ const t = {
   foodDb: {
     types: { dry: 'Dry', wet: 'Wet', treat: 'Treat', supplement: 'Supplement' },
   },
-  common: { confirm: 'Confirm', delete: 'Delete' },
+  common: { confirm: 'Confirm', delete: 'Delete', edit: 'Edit', close: 'Close', cancel: 'Cancel' },
+  trash: { title: 'Trash', changeTime: 'Change Time' },
 };
 
 // ─── Mock external dependencies so components render in isolation ───────────
@@ -55,7 +56,7 @@ import { LogPage, HistoryPage, LogCard } from '../../components/pages/LogHistory
 // ──────────────────────────────────────────────────────────────────────────────
 describe('LogPage', () => {
   it('renders without crashing (empty logs)', () => {
-    render(<LogPage t={t} todayLogs={[]} todayKcal={0} todayWater={0} todayProtein={0} onDelete={() => {}} />);
+    render(<LogPage t={t} todayLogs={[]} todayKcal={0} todayWater={0} todayProtein={0} onTrash={() => {}} onPatch={() => {}} />);
     expect(screen.getByText(t.log.noLog)).toBeTruthy();
   });
 
@@ -72,7 +73,7 @@ describe('LogPage', () => {
       extraWaterMl: 0,
       items: [{ foodType: 'wet', foodName: 'Chicken Can', grams: 100, kcal: 120 }],
     }];
-    render(<LogPage t={t} todayLogs={logs} todayKcal={120} todayWater={50} todayProtein={10} onDelete={() => {}} />);
+    render(<LogPage t={t} todayLogs={logs} todayKcal={120} todayWater={50} todayProtein={10} onTrash={() => {}} onPatch={() => {}} />);
     expect(screen.getByText('Chicken Can')).toBeTruthy();
   });
 
@@ -85,7 +86,7 @@ describe('LogPage', () => {
       createdAt: '2024-01-01T10:00:00Z',
       date: '2024-01-01',
     }];
-    render(<LogPage t={t} todayLogs={logs} todayKcal={0} todayWater={150} todayProtein={0} onDelete={() => {}} />);
+    render(<LogPage t={t} todayLogs={logs} todayKcal={0} todayWater={150} todayProtein={0} onTrash={() => {}} onPatch={() => {}} />);
     expect(screen.getByText('150 ml')).toBeTruthy();
   });
 
@@ -99,7 +100,7 @@ describe('LogPage', () => {
       createdAt: '2024-01-01T09:00:00Z',
       date: '2024-01-01',
     }];
-    render(<LogPage t={t} todayLogs={logs} todayKcal={0} todayWater={0} todayProtein={0} onDelete={() => {}} />);
+    render(<LogPage t={t} todayLogs={logs} todayKcal={0} todayWater={0} todayProtein={0} onTrash={() => {}} onPatch={() => {}} />);
     expect(screen.getByText('Brown')).toBeTruthy();
   });
 });
@@ -107,7 +108,7 @@ describe('LogPage', () => {
 // ──────────────────────────────────────────────────────────────────────────────
 describe('HistoryPage', () => {
   it('renders without crashing (empty logs)', () => {
-    render(<HistoryPage t={t} logs={[]} onDelete={() => {}} />);
+    render(<HistoryPage t={t} logs={[]} onTrash={() => {}} onPatch={() => {}} />);
     expect(screen.getByText(t.history.noHistory)).toBeTruthy();
   });
 
@@ -116,7 +117,7 @@ describe('HistoryPage', () => {
       { id: 'a', kind: 'water', ml: 100, source: 'bowl', date: '2024-01-02', createdAt: '2024-01-02T10:00:00Z' },
       { id: 'b', kind: 'water', ml: 200, source: 'fountain', date: '2024-01-01', createdAt: '2024-01-01T10:00:00Z' },
     ];
-    render(<HistoryPage t={t} logs={logs} onDelete={() => {}} />);
+    render(<HistoryPage t={t} logs={logs} onTrash={() => {}} onPatch={() => {}} />);
     expect(screen.getByText('100 ml')).toBeTruthy();
     expect(screen.getByText('200 ml')).toBeTruthy();
   });
@@ -130,7 +131,7 @@ describe('HistoryPage', () => {
         items: [{ foodType: 'dry', foodName: 'Kibble', grams: 30, kcal: 80 }],
       },
     ];
-    render(<HistoryPage t={t} logs={logs} onDelete={() => {}} />);
+    render(<HistoryPage t={t} logs={logs} onTrash={() => {}} onPatch={() => {}} />);
 
     // Both visible initially
     expect(screen.getByText('100 ml')).toBeTruthy();
@@ -144,7 +145,7 @@ describe('HistoryPage', () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-describe('LogCard delete UX', () => {
+describe('LogCard long-press menu', () => {
   const waterLog = {
     id: 'del-1',
     kind: 'water',
@@ -154,25 +155,36 @@ describe('LogCard delete UX', () => {
     date: '2024-01-01',
   };
 
-  it('renders × delete button initially', () => {
-    render(<LogCard log={waterLog} t={t} onDelete={() => {}} />);
+  it('renders card without any delete button visible by default', () => {
+    render(<LogCard log={waterLog} t={t} onTrash={() => {}} onPatch={() => {}} />);
+    expect(screen.queryByRole('button', { name: t.common.delete })).toBeNull();
+  });
+
+  it('shows center menu with Edit and Delete options on contextmenu', async () => {
+    render(<LogCard log={waterLog} t={t} onTrash={() => {}} onPatch={() => {}} />);
+    const card = document.querySelector('.log-card');
+    await userEvent.pointer({ target: card, keys: '[MouseRight]' });
+    expect(screen.getByRole('button', { name: t.common.edit })).toBeTruthy();
     expect(screen.getByRole('button', { name: t.common.delete })).toBeTruthy();
   });
 
-  it('arms confirm on first click (shows ✓)', async () => {
-    render(<LogCard log={waterLog} t={t} onDelete={() => {}} />);
-    const btn = screen.getByRole('button', { name: t.common.delete });
-    await userEvent.click(btn);
-    expect(screen.getByRole('button', { name: t.common.confirm })).toBeTruthy();
+  it('calls onTrash with full log object when Delete is clicked', async () => {
+    const onTrash = vi.fn();
+    render(<LogCard log={waterLog} t={t} onTrash={onTrash} onPatch={() => {}} />);
+    const card = document.querySelector('.log-card');
+    await userEvent.pointer({ target: card, keys: '[MouseRight]' });
+    await userEvent.click(screen.getByRole('button', { name: t.common.delete }));
+    expect(onTrash).toHaveBeenCalledWith(waterLog);
   });
 
-  it('calls onDelete with log id on second click', async () => {
-    const onDelete = vi.fn();
-    render(<LogCard log={waterLog} t={t} onDelete={onDelete} />);
-    const btn = screen.getByRole('button', { name: t.common.delete });
-    await userEvent.click(btn);
-    await userEvent.click(screen.getByRole('button', { name: t.common.confirm }));
-    expect(onDelete).toHaveBeenCalledWith('del-1');
+  it('closes menu on Cancel without calling onTrash', async () => {
+    const onTrash = vi.fn();
+    render(<LogCard log={waterLog} t={t} onTrash={onTrash} onPatch={() => {}} />);
+    const card = document.querySelector('.log-card');
+    await userEvent.pointer({ target: card, keys: '[MouseRight]' });
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onTrash).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: t.common.edit })).toBeNull();
   });
 });
 
