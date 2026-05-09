@@ -167,15 +167,31 @@ export default function App() {
   const addFood = (food) => setFoods(prev => [{ ...food, id: uid() }, ...prev]);
   const updateFood = (food) => {
     setFoods(prev => prev.map(f => f.id === food.id ? food : f));
-    setLogs(prev => prev.map(log => {
+    const patchMealLog = (log) => {
       if (log.kind !== "meal" || !log.items) return log;
-      const next = log.items.map(item =>
-        item.foodId === food.id
-          ? { ...item, foodName: food.name, foodType: food.type, foodSubtype: food.subtype }
-          : item
-      );
-      return next === log.items ? log : { ...log, items: next };
-    }));
+      let changed = false;
+      const next = log.items.map(item => {
+        if (item.foodId !== food.id) return item;
+        changed = true;
+        return {
+          ...item,
+          foodName:     food.name,
+          foodType:     food.type,
+          foodSubtype:  food.subtype,
+          kcal:         +((food.kcalPer100g    * item.grams) / 100).toFixed(2),
+          protein:      +((food.proteinPer100g * item.grams) / 100).toFixed(2),
+          waterFromFood:+(((food.waterPer100g ?? 0) * item.grams) / 100).toFixed(2),
+        };
+      });
+      if (!changed) return log;
+      const totalKcal          = next.reduce((s, i) => s + i.kcal,          0);
+      const totalProtein       = next.reduce((s, i) => s + i.protein,       0);
+      const totalWaterFromFood = next.reduce((s, i) => s + i.waterFromFood, 0);
+      const totalWater         = totalWaterFromFood + (log.extraWaterMl || 0);
+      return { ...log, items: next, totalKcal, totalProtein, totalWater, totalWaterFromFood };
+    };
+    setLogs(prev => prev.map(patchMealLog));
+    setTrash(prev => prev.map(patchMealLog));
   };
 
   // ── Today's derived data (memoised — only recomputes when logs change) ──
@@ -266,14 +282,14 @@ export default function App() {
               </button>
             </div>
             <LogPage
-              t={t} todayLogs={todayLogs}
+              t={t} foods={foods} todayLogs={todayLogs}
               todayKcal={todayKcal} todayWater={todayWater} todayProtein={todayProtein}
               onTrash={trashLog} onPatch={patchLog}
             />
           </>
         )}
         {tab === "history" && (
-          <HistoryPage t={t} logs={logs} onTrash={trashLog} onPatch={patchLog} />
+          <HistoryPage t={t} foods={foods} logs={logs} onTrash={trashLog} onPatch={patchLog} />
         )}
         {tab === "stats" && (
           <StatsPage t={t} logs={logs} foods={foods} />

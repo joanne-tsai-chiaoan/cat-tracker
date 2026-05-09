@@ -11,6 +11,7 @@ export function AddMealModal({ t, foods, initial, onSave, onClose }) {
   const [note, setNote] = useState(initial?.note || "");
   const [photos, setPhotos] = useState(initial?.photos || initial?.photoIds || []);
   const [addingFood, setAddingFood] = useState(false);
+  const [addFoodType, setAddFoodType] = useState(foods[0]?.type || "");
   const [selFoodId, setSelFoodId] = useState(foods[0]?.id || "");
   const [grams, setGrams] = useState("");
   const [editingIndex, setEditingIndex] = useState(null);
@@ -115,12 +116,26 @@ export function AddMealModal({ t, foods, initial, onSave, onClose }) {
 
         {addingFood ? (
           <div className="add-food-box">
+            {/* Food type filter */}
+            <div className="food-type-filter">
+              {Object.entries(t.foodDb.types).map(([type, label]) => (
+                <button
+                  key={type}
+                  className={`food-type-pill${addFoodType === type ? " active" : ""}`}
+                  onClick={() => {
+                    setAddFoodType(type);
+                    const first = foods.find(f => f.type === type);
+                    if (first) setSelFoodId(first.id);
+                  }}
+                >{label}</button>
+              ))}
+            </div>
             <div className="form-group" style={{ marginBottom: 8 }}>
               <select className="form-input form-select" value={selFoodId}
                 onChange={e => setSelFoodId(e.target.value)}>
-                {foods.length === 0
+                {foods.filter(f => f.type === addFoodType).length === 0
                   ? <option value="">{t.log.noFood}</option>
-                  : foods.map(f => (
+                  : foods.filter(f => f.type === addFoodType).map(f => (
                       <option key={f.id} value={f.id}>
                         {f.name} ({f.kcalPer100g} kcal/100g)
                       </option>

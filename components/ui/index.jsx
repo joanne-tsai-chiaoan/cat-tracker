@@ -316,6 +316,12 @@ export function useLongPress(onLongPress, delay = 550) {
       if (navigator.vibrate) navigator.vibrate(50);
       onLongPress();
     },
+    // Desktop double-click as alternative to long-press
+    onDoubleClick: (e) => {
+      e.preventDefault();
+      cancel();
+      onLongPress();
+    },
   };
 }
 

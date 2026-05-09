@@ -6,33 +6,41 @@ import { Lightbox, DriveImg, SectionHeader, EmptyState, TabSelector, TypeBadge, 
 import { getPhotoUrl } from "../../storage.js";
 
 // ── LogPage ───────────────────────────────────────────────────────────────────
-export function LogPage({ t, todayLogs, todayKcal, todayWater, todayProtein, onTrash, onPatch }) {
+export function LogPage({ t, foods, todayLogs, todayKcal, todayWater, todayProtein, onTrash, onPatch }) {
   return (
     <div>
       <SectionHeader title={t.log.title} subtitle={t.log.sub} />
       {!todayLogs.length
         ? <EmptyState icon="🐾" title={t.log.noLog} subtitle={t.log.noLogSub} />
-        : todayLogs.map(log => <LogCard key={log.id} log={log} t={t} onTrash={onTrash} onPatch={onPatch} />)
+        : todayLogs.map(log => <LogCard key={log.id} log={log} t={t} foods={foods} onTrash={onTrash} onPatch={onPatch} />)
       }
     </div>
   );
 }
 
 // ── LogCard ───────────────────────────────────────────────────────────────────
-export function LogCard({ log, t, onTrash, onPatch }) {
-  const [lightbox,  setLightbox]  = useState(null);
-  const [menu,      setMenu]      = useState(false);
-  const [editMode,  setEditMode]  = useState(false);
-  const [editGrams, setEditGrams] = useState({});
-  const [editMl,    setEditMl]    = useState(0);
+export function LogCard({ log, t, foods, onTrash, onPatch }) {
+  const [lightbox,      setLightbox]      = useState(null);
+  const [menu,          setMenu]          = useState(false);
+  const [editMode,      setEditMode]      = useState(false);
+  const [editGrams,     setEditGrams]     = useState({});
+  const [editFoodId,    setEditFoodId]    = useState({});
+  const [editTypeFilter,setEditTypeFilter]= useState({});
+  const [editMl,        setEditMl]        = useState(0);
 
   const { pressing, ...longPressHandlers } = useLongPress(() => setMenu(true));
 
   const enterEdit = () => {
     if (log.kind === "meal") {
-      const initial = {};
-      log.items.forEach((item, i) => { initial[i] = String(item.grams); });
-      setEditGrams(initial);
+      const grams = {}, foodIds = {}, typeFilters = {};
+      log.items.forEach((item, i) => {
+        grams[i]       = String(item.grams);
+        foodIds[i]     = item.foodId;
+        typeFilters[i] = item.foodType;
+      });
+      setEditGrams(grams);
+      setEditFoodId(foodIds);
+      setEditTypeFilter(typeFilters);
     }
     if (log.kind === "water") setEditMl(String(log.ml));
     setEditMode(true);
@@ -42,22 +50,31 @@ export function LogCard({ log, t, onTrash, onPatch }) {
     if (!editMode) return;
     let updated = log;
     if (log.kind === "meal") {
+      const foodsMap = Object.fromEntries((foods || []).map(f => [f.id, f]));
       const newItems = log.items.map((item, i) => {
-        const ng = parseFloat(editGrams[i]) || item.grams;
-        if (ng === item.grams) return item;
+        const ng     = parseFloat(editGrams[i]) || item.grams;
+        const foodId = editFoodId[i] ?? item.foodId;
+        const food   = foodsMap[foodId];
+        if (food) {
+          return {
+            ...item,
+            foodId:       food.id,
+            foodName:     food.name,
+            foodType:     food.type,
+            foodSubtype:  food.subtype,
+            grams:        ng,
+            kcal:         +((food.kcalPer100g    * ng) / 100).toFixed(2),
+            protein:      +((food.proteinPer100g * ng) / 100).toFixed(2),
+            waterFromFood:+(((food.waterPer100g ?? 0) * ng) / 100).toFixed(2),
+          };
+        }
         const ratio = ng / item.grams;
-        return {
-          ...item,
-          grams: ng,
-          kcal:          +(item.kcal          * ratio).toFixed(2),
-          protein:       +(item.protein       * ratio).toFixed(2),
-          waterFromFood: +(item.waterFromFood * ratio).toFixed(2),
-        };
+        return { ...item, grams: ng, kcal: +(item.kcal * ratio).toFixed(2), protein: +(item.protein * ratio).toFixed(2), waterFromFood: +(item.waterFromFood * ratio).toFixed(2) };
       });
-      const totalKcal         = newItems.reduce((s, i) => s + i.kcal,          0);
-      const totalProtein      = newItems.reduce((s, i) => s + i.protein,       0);
-      const totalWaterFromFood= newItems.reduce((s, i) => s + i.waterFromFood, 0);
-      const totalWater        = totalWaterFromFood + (log.extraWaterMl || 0);
+      const totalKcal          = newItems.reduce((s, i) => s + i.kcal,          0);
+      const totalProtein       = newItems.reduce((s, i) => s + i.protein,       0);
+      const totalWaterFromFood = newItems.reduce((s, i) => s + i.waterFromFood, 0);
+      const totalWater         = totalWaterFromFood + (log.extraWaterMl || 0);
       updated = { ...log, items: newItems, totalKcal, totalProtein, totalWater, totalWaterFromFood };
     }
     if (log.kind === "water") {
@@ -78,11 +95,23 @@ export function LogCard({ log, t, onTrash, onPatch }) {
       >
         {log.kind === "meal" && (
           <MealCardBody
-            log={log} t={t}
+            log={log} t={t} foods={foods}
             onPhotoClick={setLightbox}
             editMode={editMode}
             editGrams={editGrams}
+            editFoodId={editFoodId}
+            editTypeFilter={editTypeFilter}
             onEditGrams={(i, v) => setEditGrams(prev => ({ ...prev, [i]: v }))}
+            onEditFoodId={(i, foodId, foodType) => {
+              setEditFoodId(prev => ({ ...prev, [i]: foodId }));
+              setEditTypeFilter(prev => ({ ...prev, [i]: foodType }));
+            }}
+            onEditTypeFilter={(i, type) => {
+              setEditTypeFilter(prev => ({ ...prev, [i]: type }));
+              // Reset food selection to first matching food
+              const first = (foods || []).find(f => f.type === type);
+              if (first) setEditFoodId(prev => ({ ...prev, [i]: first.id }));
+            }}
           />
         )}
         {log.kind === "water" && (
@@ -114,25 +143,42 @@ export function LogCard({ log, t, onTrash, onPatch }) {
   );
 }
 
-function MealCardBody({ log, t, onPhotoClick, editMode, editGrams, onEditGrams }) {
+function MealCardBody({ log, t, foods, onPhotoClick, editMode, editGrams, editFoodId, editTypeFilter, onEditGrams, onEditFoodId, onEditTypeFilter }) {
   const isSingle   = log.items.length === 1;
   const totalGrams = log.items.reduce((s, i) => s + i.grams, 0);
   const photoRefs  = log.photoIds || log.photos || [];
+  const FOOD_TYPES = Object.keys(t.foodDb.types);
 
   const openPhoto = (ref) => {
     if (ref.startsWith("data:")) { onPhotoClick(ref); return; }
     getPhotoUrl(ref).then(url => { if (url) onPhotoClick(url); });
   };
 
+  const foodsForType = (type) => (foods || []).filter(f => f.type === type);
+  const allFoods = foods || [];
+
   return (
     <>
       <div className="log-card-header">
         <div className="log-card-left">
           {isSingle ? (
-            <div className="log-card-title-row">
-              <TypeBadge type={log.items[0].foodType} label={t.foodDb.types[log.items[0].foodType]} />
-              <span className="log-kind-label">{log.items[0].foodName}</span>
-            </div>
+            editMode ? (
+              <FoodSelector
+                itemIndex={0}
+                item={log.items[0]}
+                foods={allFoods}
+                editFoodId={editFoodId[0] ?? log.items[0].foodId}
+                editTypeFilter={editTypeFilter[0] ?? log.items[0].foodType}
+                onEditFoodId={onEditFoodId}
+                onEditTypeFilter={onEditTypeFilter}
+                t={t}
+              />
+            ) : (
+              <div className="log-card-title-row">
+                <TypeBadge type={log.items[0].foodType} label={t.foodDb.types[log.items[0].foodType]} />
+                <span className="log-kind-label">{log.items[0].foodName}</span>
+              </div>
+            )
           ) : (
             <div className="log-kind-label">{t.log.mealTypes[log.mealType] || log.mealType}</div>
           )}
@@ -165,18 +211,33 @@ function MealCardBody({ log, t, onPhotoClick, editMode, editGrams, onEditGrams }
 
       {!isSingle && log.items.map((item, i) => (
         <div key={i} className={`log-food-row${editMode ? " log-food-row--editing" : ""}`}>
-          <TypeBadge type={item.foodType} label={t.foodDb.types[item.foodType]} />
-          <span className="log-food-name">{item.foodName}</span>
           {editMode ? (
-            <input
-              className="inline-edit-input"
-              type="number" inputMode="decimal" min="0"
-              value={editGrams[i] ?? item.grams}
-              onChange={e => onEditGrams(i, e.target.value)}
-              onClick={e => e.stopPropagation()}
-            />
+            <>
+              <FoodSelector
+                itemIndex={i}
+                item={item}
+                foods={allFoods}
+                editFoodId={editFoodId[i] ?? item.foodId}
+                editTypeFilter={editTypeFilter[i] ?? item.foodType}
+                onEditFoodId={onEditFoodId}
+                onEditTypeFilter={onEditTypeFilter}
+                t={t}
+                compact
+              />
+              <input
+                className="inline-edit-input"
+                type="number" inputMode="decimal" min="0"
+                value={editGrams[i] ?? item.grams}
+                onChange={e => onEditGrams(i, e.target.value)}
+                onClick={e => e.stopPropagation()}
+              />
+            </>
           ) : (
-            <span className="log-food-meta">{item.grams}g · {item.kcal.toFixed(0)}kcal</span>
+            <>
+              <TypeBadge type={item.foodType} label={t.foodDb.types[item.foodType]} />
+              <span className="log-food-name">{item.foodName}</span>
+              <span className="log-food-meta">{item.grams}g · {item.kcal.toFixed(0)}kcal</span>
+            </>
           )}
         </div>
       ))}
@@ -191,6 +252,43 @@ function MealCardBody({ log, t, onPhotoClick, editMode, editGrams, onEditGrams }
 
       {log.note && <div className="log-note">💬 {log.note}</div>}
     </>
+  );
+}
+
+// ── FoodSelector — type filter pills + food dropdown used during card edit ───
+function FoodSelector({ itemIndex, item, foods, editFoodId, editTypeFilter, onEditFoodId, onEditTypeFilter, t, compact }) {
+  const TYPES = Object.keys(t.foodDb.types);
+  const filteredFoods = foods.filter(f => f.type === editTypeFilter);
+
+  return (
+    <div className={`food-selector${compact ? " food-selector--compact" : ""}`} onClick={e => e.stopPropagation()}>
+      <div className="food-selector-types">
+        {TYPES.map(type => (
+          <button
+            key={type}
+            className={`food-type-pill${editTypeFilter === type ? " active" : ""}`}
+            onClick={() => onEditTypeFilter(itemIndex, type)}
+          >
+            {t.foodDb.types[type]}
+          </button>
+        ))}
+      </div>
+      <select
+        className="food-selector-select"
+        value={editFoodId}
+        onChange={e => {
+          const food = foods.find(f => f.id === e.target.value);
+          if (food) onEditFoodId(itemIndex, food.id, food.type);
+        }}
+      >
+        {filteredFoods.length === 0
+          ? <option value="">{item.foodName}</option>
+          : filteredFoods.map(f => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))
+        }
+      </select>
+    </div>
   );
 }
 
@@ -278,7 +376,7 @@ function WasteCardBody({ log, t, onPhotoClick }) {
 }
 
 // ── HistoryPage ───────────────────────────────────────────────────────────────
-export function HistoryPage({ t, logs, onTrash, onPatch }) {
+export function HistoryPage({ t, foods, logs, onTrash, onPatch }) {
   const [filter, setFilter] = useState("all");
 
   const filtered = filter === "all" ? logs : logs.filter(l => l.kind === filter);
@@ -311,7 +409,7 @@ export function HistoryPage({ t, logs, onTrash, onPatch }) {
             <div key={date}>
               <div className="date-label">{date}</div>
               {grouped[date].map(log => (
-                <LogCard key={log.id} log={log} t={t} onTrash={onTrash} onPatch={onPatch} />
+                <LogCard key={log.id} log={log} t={t} foods={foods} onTrash={onTrash} onPatch={onPatch} />
               ))}
             </div>
           ))

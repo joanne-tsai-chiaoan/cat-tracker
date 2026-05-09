@@ -718,3 +718,27 @@ input, textarea, select { -webkit-user-select: text; user-select: text; }
 .trash-item-label { font-size: 14px; font-weight: 500; color: var(--espresso); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .trash-item-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .trash-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Food type filter pills (AddMealModal + FoodSelector in card edit) ── */
+.food-type-filter {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.food-type-pill {
+  padding: 4px 10px; border-radius: 100px;
+  border: 1.5px solid var(--latte);
+  background: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--mocha);
+  transition: all .15s; -webkit-tap-highlight-color: transparent;
+}
+.food-type-pill.active {
+  background: var(--caramel); border-color: var(--caramel); color: white;
+}
+.food-type-pill:active { opacity: .75; }
+
+/* ── FoodSelector in card edit mode ── */
+.food-selector { width: 100%; }
+.food-selector--compact { display: contents; }
+.food-selector--compact .food-selector-types { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
+.food-selector--compact .food-selector-select { font-size: 13px; padding: 4px 6px; border-radius: 6px; border: 1.5px solid var(--caramel-light); background: var(--cream); color: var(--espresso); flex: 1; min-width: 0; -webkit-appearance: none; }
+.food-selector-types { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
+.food-selector-select { width: 100%; font-size: 14px; padding: 6px 8px; border-radius: 8px; border: 1.5px solid var(--caramel-light); background: var(--cream); color: var(--espresso); -webkit-appearance: none; }
