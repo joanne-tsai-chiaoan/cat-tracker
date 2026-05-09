@@ -269,17 +269,26 @@ export function useConfirmDelete(id, onDelete, delay = 2500) {
 
 // ── useLongPress ──────────────────────────────────────────────────────────────
 // Timer-based long-press for touch, plus onContextMenu for desktop right-click.
+// Returns event handlers + `pressing` boolean for progressive visual feedback.
 // CSS on the element must include: -webkit-touch-callout: none; user-select: none;
 export function useLongPress(onLongPress, delay = 550) {
-  const timer = useRef(null);
+  const timer    = useRef(null);
+  const [pressing, setPressing] = useState(false);
   const cancel = useCallback(() => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    setPressing(false);
   }, []);
   const start = useCallback(() => {
     cancel();
-    timer.current = setTimeout(() => { timer.current = null; onLongPress(); }, delay);
+    setPressing(true);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      setPressing(false);
+      onLongPress();
+    }, delay);
   }, [onLongPress, delay, cancel]);
   return {
+    pressing,
     onTouchStart:  start,
     onTouchEnd:    cancel,
     onTouchMove:   cancel,
