@@ -276,11 +276,15 @@ export function useLongPress(onLongPress, delay = 550) {
   const hasFired = useRef(false);
   const [pressing, setPressing] = useState(false);
 
-  const cancel = useCallback(() => {
+  const clearTimer = useCallback(() => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+  }, []);
+
+  const cancel = useCallback(() => {
+    clearTimer();
     setPressing(false);
     hasFired.current = false;
-  }, []);
+  }, [clearTimer]);
 
   const start = useCallback(() => {
     cancel();
@@ -299,13 +303,15 @@ export function useLongPress(onLongPress, delay = 550) {
     onTouchEnd:    cancel,
     onTouchCancel: cancel,
     onTouchMove:   cancel,
-    // onContextMenu handles desktop right-click; hasFired prevents double-fire
-    // when the OS also fires contextmenu on mobile long-press
+    // hasFired prevents double-fire: OS fires contextmenu ~500ms, timer fires
+    // at 550ms — whichever comes first wins; cancel() must NOT be called here
+    // because it resets hasFired, allowing the other path to fire again.
     onContextMenu: (e) => {
       e.preventDefault();
       if (hasFired.current) return;
       hasFired.current = true;
-      cancel();
+      clearTimer();
+      setPressing(false);
       onLongPress();
     },
   };
