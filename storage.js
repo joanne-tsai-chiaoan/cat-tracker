@@ -18,12 +18,14 @@ export const loadLang    = ()         => parse(localStorage.getItem(key("lang"))
 export const loadProfile = ()         => parse(localStorage.getItem(key("profile")), { name: "咪咪", breed: "", weight: "", photo: null });
 export const loadFoods   = (defaults) => parse(localStorage.getItem(key("foods")),   defaults);
 export const loadLogs    = ()         => parse(localStorage.getItem(key("logs")),    []);
+export const loadTrash   = ()         => parse(localStorage.getItem(key("trash")),   []);
 
 // ── Sync writes (localStorage) ────────────────────────────────────────────────
 export const saveLang    = (v) => localStorage.setItem(key("lang"),    JSON.stringify(v));
 export const saveProfile = (v) => localStorage.setItem(key("profile"), JSON.stringify(v));
 export const saveFoods   = (v) => localStorage.setItem(key("foods"),   JSON.stringify(v));
 export const saveLogs    = (v) => localStorage.setItem(key("logs"),    JSON.stringify(v));
+export const saveTrash   = (v) => localStorage.setItem(key("trash"),   JSON.stringify(v));
 
 // ── Merge helpers ─────────────────────────────────────────────────────────────
 

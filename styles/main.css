@@ -215,13 +215,6 @@ input, textarea, select { -webkit-user-select: text; user-select: text; }
   padding: 5px 0; border-bottom: 1px solid var(--latte);
 }
 .log-food-row:last-of-type { border-bottom: none; }
-.log-food-row--tappable {
-  cursor: pointer;
-  border-radius: var(--radius-xs);
-  transition: background .12s, transform .1s;
-  margin: 0 -4px; padding: 5px 4px;
-}
-.log-food-row--tappable:active { background: var(--latte); transform: scale(0.97); }
 .log-food-name {
   flex: 1; font-size: 13px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -263,19 +256,6 @@ input, textarea, select { -webkit-user-select: text; user-select: text; }
   font-size: 9px; border-radius: 4px; padding: 1px 4px; line-height: 1.4;
   pointer-events: none;
 }
-
-/* Corner delete button — replaces the full-width log-footer */
-.card-del {
-  position: absolute; top: 8px; right: 8px;
-  width: 26px; height: 26px; border-radius: 50%;
-  background: none; border: none; cursor: pointer;
-  font-size: 15px; color: var(--text-muted); opacity: 0.4;
-  display: flex; align-items: center; justify-content: center;
-  transition: opacity .15s, background .15s, color .15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.card-del:hover, .card-del:active { opacity: 1; background: var(--cream); }
-.card-del--confirm { opacity: 1; background: #ffeaea; color: #c0392b; font-weight: 700; }
 
 /* ── Date label ── */
 .date-label {
@@ -648,3 +628,93 @@ input, textarea, select { -webkit-user-select: text; user-select: text; }
 .food-detail-stat { background: var(--cream); border-radius: var(--radius-xs); padding: 12px; text-align: center; }
 .food-detail-stat-val { font-size: 18px; font-weight: 700; color: var(--espresso); }
 .food-detail-stat-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+/* ── Center Menu (long-press) ── */
+.center-menu-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  animation: overlayIn .18s ease;
+}
+.center-menu {
+  width: calc(100% - 48px); max-width: 320px;
+  background: var(--warm-white);
+  border-radius: var(--radius);
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 4px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.2);
+}
+.center-menu-item {
+  width: 100%; padding: 14px 16px;
+  background: none; border: none; cursor: pointer;
+  font-size: 15px; font-weight: 500; color: var(--espresso);
+  text-align: left; border-radius: var(--radius-xs);
+  display: flex; align-items: center; gap: 10px;
+  transition: background .15s;
+}
+.center-menu-item:active:not(:disabled) { background: var(--latte); }
+.center-menu-item.danger { color: #c0392b; }
+.center-menu-item.disabled { color: var(--text-muted); opacity: 0.45; cursor: default; }
+.center-menu-icon { font-size: 18px; }
+.center-menu-cancel {
+  width: 100%; padding: 14px 16px; margin-top: 4px;
+  background: var(--latte); border: none; cursor: pointer;
+  font-size: 15px; font-weight: 700; color: var(--mocha);
+  border-radius: var(--radius-xs); transition: background .15s;
+}
+.center-menu-cancel:active { background: #e0d5c8; }
+
+/* ── Inline card editing ── */
+.edit-backdrop {
+  position: fixed; inset: 0; z-index: 99;
+  background: rgba(0,0,0,.15);
+}
+.log-card--editing {
+  position: relative; z-index: 100;
+  box-shadow: 0 4px 20px rgba(0,0,0,.18);
+}
+.inline-edit-input {
+  font-size: 16px;
+  border: 1.5px solid var(--caramel-light);
+  border-radius: 6px;
+  padding: 4px 6px;
+  background: var(--cream);
+  color: var(--espresso);
+  width: 72px;
+  text-align: right;
+  -webkit-appearance: none;
+}
+.log-food-row--editing { background: var(--cream); border-radius: 6px; }
+
+/* ── Trash button in header ── */
+.trash-btn {
+  position: relative;
+  background: none; border: none; cursor: pointer;
+  font-size: 18px; padding: 4px 6px;
+  border-radius: var(--radius-xs);
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+}
+.trash-btn:active { background: var(--latte); }
+.trash-badge {
+  position: absolute; top: 0; right: 0;
+  background: #c0392b; color: white;
+  font-size: 10px; font-weight: 700;
+  width: 15px; height: 15px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Trash modal ── */
+.trash-empty {
+  text-align: center; color: var(--text-muted);
+  padding: 24px 0; font-size: 14px;
+}
+.trash-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; max-height: 55vh; overflow-y: auto; }
+.trash-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--cream); border-radius: var(--radius-xs); padding: 10px 12px;
+}
+.trash-item-info { flex: 1; min-width: 0; }
+.trash-item-label { font-size: 14px; font-weight: 500; color: var(--espresso); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trash-item-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.trash-item-actions { display: flex; gap: 6px; flex-shrink: 0; }

@@ -5,8 +5,8 @@ import { LANGS } from "./i18n.js";
 import { uid, today } from "./utils.js";
 import { SAMPLE_FOODS } from "./constants.js";
 import {
-  loadLang, loadProfile, loadFoods, loadLogs,
-  saveLang, saveProfile, saveFoods, saveLogs,
+  loadLang, loadProfile, loadFoods, loadLogs, loadTrash,
+  saveLang, saveProfile, saveFoods, saveLogs, saveTrash,
   syncFromDrive, syncToDrive, mergeLogs, mergeFoods,
 } from "./storage.js";
 import { isSignedIn, signIn, signOut, onTokenChange, tryAutoRefresh } from "./auth.js";
@@ -26,6 +26,7 @@ export default function App() {
   const [profile,    setProfile]    = useState(() => loadProfile());
   const [foods,      setFoods]      = useState(() => loadFoods(SEEDED_FOODS));
   const [logs,       setLogs]       = useState(() => loadLogs());
+  const [trash,      setTrash]      = useState(() => loadTrash());
   const [tab,        setTab]        = useState("log");
   const [modal,      setModal]      = useState(null);
   const [editTarget, setEditTarget] = useState(null);
@@ -44,6 +45,13 @@ export default function App() {
   useEffect(() => { saveProfile(profile); }, [profile]);
   useEffect(() => { saveFoods(foods); },     [foods]);
   useEffect(() => { saveLogs(logs); },       [logs]);
+  useEffect(() => { saveTrash(trash); },     [trash]);
+
+  // ── Prune trash entries older than 7 days on mount ──
+  useEffect(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    setTrash(prev => prev.filter(l => new Date(l.trashedAt).getTime() > cutoff));
+  }, []);
 
   // ── On mount: attempt silent token refresh (keeps user logged in across reloads) ──
   useEffect(() => { tryAutoRefresh(); }, []);
@@ -106,6 +114,10 @@ export default function App() {
   }, [lang, profile, foods, logs]);
 
   // ── Log mutations ──
+  const patchLog = (updatedLog) => {
+    setLogs(prev => prev.map(l => l.id === updatedLog.id ? updatedLog : l));
+  };
+
   const addLog = (entry) => {
     const logEntry = { ...entry, id: uid(), createdAt: new Date().toISOString() };
     setLogs(prev => [logEntry, ...prev]);
@@ -124,7 +136,18 @@ export default function App() {
     }
   };
 
-  const deleteLog = (id) => setLogs(prev => prev.filter(l => l.id !== id));
+  const trashLog = (log) => {
+    setLogs(prev => prev.filter(l => l.id !== log.id));
+    setTrash(prev => [{ ...log, trashedAt: new Date().toISOString() }, ...prev]);
+  };
+
+  const recoverLog = (log) => {
+    const { trashedAt, ...clean } = log;
+    setTrash(prev => prev.filter(l => l.id !== log.id));
+    setLogs(prev => [clean, ...prev].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+  };
+
+  const permanentDeleteLog = (id) => setTrash(prev => prev.filter(l => l.id !== id));
 
   const updateLog = (entry) => {
     setLogs(prev => prev.map(l =>
@@ -186,6 +209,13 @@ export default function App() {
             {lang === "zh" ? "EN" : "中"}
           </button>
           <button
+            className={`trash-btn${trash.length > 0 ? " trash-btn--has-items" : ""}`}
+            onClick={() => setModal("trash")}
+            aria-label="Trash"
+          >
+            🗑{trash.length > 0 && <span className="trash-badge">{trash.length}</span>}
+          </button>
+          <button
             className={`drive-btn drive-btn--${syncStatus}`}
             title={syncStatus === "idle" ? "連結 Google Drive" : syncStatus === "syncing" ? "同步中…" : syncStatus === "ok" ? "已同步 — 點擊登出" : "同步失敗"}
             onClick={() => {
@@ -238,12 +268,12 @@ export default function App() {
             <LogPage
               t={t} todayLogs={todayLogs}
               todayKcal={todayKcal} todayWater={todayWater} todayProtein={todayProtein}
-              onDelete={deleteLog} onEdit={handleEditLog}
+              onTrash={trashLog} onPatch={patchLog}
             />
           </>
         )}
         {tab === "history" && (
-          <HistoryPage t={t} logs={logs} onDelete={deleteLog} onEdit={handleEditLog} />
+          <HistoryPage t={t} logs={logs} onTrash={trashLog} onPatch={patchLog} />
         )}
         {tab === "stats" && (
           <StatsPage t={t} logs={logs} foods={foods} />
@@ -319,6 +349,68 @@ export default function App() {
           onSave={(p) => { setProfile(p); closeModal(); }}
           onClose={closeModal} />
       )}
+      {modal === "trash" && (
+        <TrashModal
+          t={t} trash={trash}
+          onRecover={recoverLog}
+          onDelete={permanentDeleteLog}
+          onClose={closeModal}
+        />
+      )}
     </>
+  );
+}
+
+// ── TrashModal ────────────────────────────────────────────────────────────────
+function TrashModal({ t, trash, onRecover, onDelete, onClose }) {
+  const now = Date.now();
+  const daysLeft = (item) => {
+    const elapsed = now - new Date(item.trashedAt).getTime();
+    return Math.max(0, 7 - Math.floor(elapsed / (24 * 60 * 60 * 1000)));
+  };
+
+  const kindLabel = (log) => {
+    if (log.kind === "meal")  return log.items?.[0]?.foodName ?? (t.log.mealTypes[log.mealType] || log.mealType);
+    if (log.kind === "water") return `💧 ${log.ml} ml`;
+    if (log.kind === "waste") return `${log.wasteType === "poop" ? "💩" : "💧"} ${t.waste.types[log.wasteType]}`;
+    return log.kind;
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-handle" />
+        <div className="modal-title">🗑 {t.trash?.title ?? "Trash"}</div>
+
+        {trash.length === 0 ? (
+          <div className="trash-empty">{t.trash?.empty ?? "No deleted records"}</div>
+        ) : (
+          <div className="trash-list">
+            {trash.map(log => (
+              <div key={log.id} className="trash-item">
+                <div className="trash-item-info">
+                  <div className="trash-item-label">{kindLabel(log)}</div>
+                  <div className="trash-item-meta">
+                    {log.date} · {t.trash?.daysLeft?.(daysLeft(log)) ?? `${daysLeft(log)}d left`}
+                  </div>
+                </div>
+                <div className="trash-item-actions">
+                  <button className="btn btn-sm btn-ghost" onClick={() => onRecover(log)}>
+                    {t.trash?.recover ?? "Recover"}
+                  </button>
+                  <button className="btn btn-sm btn-danger" onClick={() => onDelete(log.id)}>
+                    {t.trash?.deletePerm ?? "Delete"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button className="btn btn-ghost btn-full" style={{ marginTop: 16 }} onClick={onClose}>
+          {t.common.close}
+        </button>
+      </div>
+    </div>
   );
 }

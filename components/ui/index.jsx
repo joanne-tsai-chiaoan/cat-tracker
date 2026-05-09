@@ -276,11 +276,16 @@ export function useLongPress(onLongPress, delay = 550) {
   const hasFired = useRef(false);
   const [pressing, setPressing] = useState(false);
 
-  const cancel = useCallback(() => {
+  const clearTimer = useCallback(() => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+  }, []);
+
+  const cancel = useCallback(() => {
+    clearTimer();
     setPressing(false);
     hasFired.current = false;
-  }, []);
+  }, [clearTimer]);
+
 
   const start = useCallback(() => {
     cancel();
@@ -289,6 +294,7 @@ export function useLongPress(onLongPress, delay = 550) {
       timer.current = null;
       setPressing(false);
       hasFired.current = true;
+      if (navigator.vibrate) navigator.vibrate(50);
       onLongPress();
     }, delay);
   }, [onLongPress, delay, cancel]);
@@ -299,13 +305,15 @@ export function useLongPress(onLongPress, delay = 550) {
     onTouchEnd:    cancel,
     onTouchCancel: cancel,
     onTouchMove:   cancel,
-    // onContextMenu handles desktop right-click; hasFired prevents double-fire
-    // when the OS also fires contextmenu on mobile long-press
+    // hasFired prevents double-fire: OS fires contextmenu ~500ms, timer fires
+    // at 550ms — whichever comes first wins; clearTimer() preserves hasFired.
     onContextMenu: (e) => {
       e.preventDefault();
       if (hasFired.current) return;
       hasFired.current = true;
-      cancel();
+      clearTimer();
+      setPressing(false);
+      if (navigator.vibrate) navigator.vibrate(50);
       onLongPress();
     },
   };
@@ -326,6 +334,27 @@ export function ActionSheet({ items, onClose }) {
           </button>
         ))}
         <button className="action-sheet-cancel" onClick={onClose}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ── CenterMenu ────────────────────────────────────────────────────────────────
+// Centered overlay menu for long-press actions. items = [{ label, icon?, danger?, disabled?, onClick }]
+export function CenterMenu({ items, onClose }) {
+  return (
+    <div className="center-menu-overlay" onClick={onClose}>
+      <div className="center-menu" onClick={e => e.stopPropagation()}>
+        {items.map(({ label, icon, danger, disabled, onClick }) => (
+          <button key={label}
+            className={`center-menu-item${danger ? " danger" : ""}${disabled ? " disabled" : ""}`}
+            disabled={disabled}
+            onClick={() => { if (!disabled) { onClick(); onClose(); } }}>
+            {icon && <span className="center-menu-icon">{icon}</span>}
+            {label}
+          </button>
+        ))}
+        <button className="center-menu-cancel" onClick={onClose}>Cancel</button>
       </div>
     </div>
   );

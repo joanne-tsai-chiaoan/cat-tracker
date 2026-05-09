@@ -2,59 +2,119 @@
 
 import { useState } from "react";
 import { fmtTime } from "../../utils.js";
-import { Lightbox, DriveImg, SectionHeader, EmptyState, TabSelector, TypeBadge, useConfirmDelete, ActionSheet, useLongPress } from "../ui/index.jsx";
+import { Lightbox, DriveImg, SectionHeader, EmptyState, TabSelector, TypeBadge, CenterMenu, useLongPress } from "../ui/index.jsx";
 import { getPhotoUrl } from "../../storage.js";
 
 // ── LogPage ───────────────────────────────────────────────────────────────────
-export function LogPage({ t, todayLogs, todayKcal, todayWater, todayProtein, onDelete, onEdit }) {
+export function LogPage({ t, todayLogs, todayKcal, todayWater, todayProtein, onTrash, onPatch }) {
   return (
     <div>
       <SectionHeader title={t.log.title} subtitle={t.log.sub} />
       {!todayLogs.length
         ? <EmptyState icon="🐾" title={t.log.noLog} subtitle={t.log.noLogSub} />
-        : todayLogs.map(log => <LogCard key={log.id} log={log} t={t} onDelete={onDelete} onEdit={onEdit} />)
+        : todayLogs.map(log => <LogCard key={log.id} log={log} t={t} onTrash={onTrash} onPatch={onPatch} />)
       }
     </div>
   );
 }
 
 // ── LogCard ───────────────────────────────────────────────────────────────────
-export function LogCard({ log, t, onDelete, onEdit }) {
-  const { armed, trigger } = useConfirmDelete(log.id, onDelete);
-  const [lightbox, setLightbox] = useState(null);
-  const [sheet,    setSheet]    = useState(false);
-  const { pressing, ...longPressHandlers } = useLongPress(() => setSheet(true));
+export function LogCard({ log, t, onTrash, onPatch }) {
+  const [lightbox,  setLightbox]  = useState(null);
+  const [menu,      setMenu]      = useState(false);
+  const [editMode,  setEditMode]  = useState(false);
+  const [editGrams, setEditGrams] = useState({});
+  const [editMl,    setEditMl]    = useState(0);
+
+  const { pressing, ...longPressHandlers } = useLongPress(() => setMenu(true));
+
+  const enterEdit = () => {
+    if (log.kind === "meal") {
+      const initial = {};
+      log.items.forEach((item, i) => { initial[i] = String(item.grams); });
+      setEditGrams(initial);
+    }
+    if (log.kind === "water") setEditMl(String(log.ml));
+    setEditMode(true);
+  };
+
+  const saveEdit = () => {
+    if (!editMode) return;
+    let updated = log;
+    if (log.kind === "meal") {
+      const newItems = log.items.map((item, i) => {
+        const ng = parseFloat(editGrams[i]) || item.grams;
+        if (ng === item.grams) return item;
+        const ratio = ng / item.grams;
+        return {
+          ...item,
+          grams: ng,
+          kcal:          +(item.kcal          * ratio).toFixed(2),
+          protein:       +(item.protein       * ratio).toFixed(2),
+          waterFromFood: +(item.waterFromFood * ratio).toFixed(2),
+        };
+      });
+      const totalKcal         = newItems.reduce((s, i) => s + i.kcal,          0);
+      const totalProtein      = newItems.reduce((s, i) => s + i.protein,       0);
+      const totalWaterFromFood= newItems.reduce((s, i) => s + i.waterFromFood, 0);
+      const totalWater        = totalWaterFromFood + (log.extraWaterMl || 0);
+      updated = { ...log, items: newItems, totalKcal, totalProtein, totalWater, totalWaterFromFood };
+    }
+    if (log.kind === "water") {
+      const ml = parseFloat(editMl) || log.ml;
+      updated = { ...log, ml };
+    }
+    onPatch(updated);
+    setEditMode(false);
+  };
 
   return (
-    <div className={`log-card kind-${log.kind}${pressing ? " log-card--pressing" : ""}`} {...longPressHandlers}>
-      <button
-        className={`card-del${armed ? " card-del--confirm" : ""}`}
-        onClick={trigger}
-        aria-label={armed ? t.common.confirm : t.common.delete}
+    <>
+      {editMode && <div className="edit-backdrop" onClick={saveEdit} />}
+
+      <div
+        className={`log-card kind-${log.kind}${pressing ? " log-card--pressing" : ""}${editMode ? " log-card--editing" : ""}`}
+        {...(editMode ? {} : longPressHandlers)}
       >
-        {armed ? "✓" : "×"}
-      </button>
+        {log.kind === "meal" && (
+          <MealCardBody
+            log={log} t={t}
+            onPhotoClick={setLightbox}
+            editMode={editMode}
+            editGrams={editGrams}
+            onEditGrams={(i, v) => setEditGrams(prev => ({ ...prev, [i]: v }))}
+          />
+        )}
+        {log.kind === "water" && (
+          <WaterCardBody
+            log={log} t={t}
+            editMode={editMode}
+            editMl={editMl}
+            onEditMl={setEditMl}
+          />
+        )}
+        {log.kind === "waste" && (
+          <WasteCardBody log={log} t={t} onPhotoClick={setLightbox} />
+        )}
 
-      {log.kind === "meal"  && <MealCardBody  log={log} t={t} onPhotoClick={setLightbox} onEdit={onEdit} />}
-      {log.kind === "water" && <WaterCardBody log={log} t={t} />}
-      {log.kind === "waste" && <WasteCardBody log={log} t={t} onPhotoClick={setLightbox} />}
+        <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
+      </div>
 
-      <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
-
-      {sheet && (
-        <ActionSheet
-          onClose={() => setSheet(false)}
+      {menu && (
+        <CenterMenu
+          onClose={() => setMenu(false)}
           items={[
-            onEdit && { label: t.common.edit, icon: "✏️", onClick: () => onEdit(log) },
-            { label: t.common.delete, icon: "🗑", danger: true, onClick: () => onDelete(log.id) },
-          ].filter(Boolean)}
+            { label: t.common.edit,   icon: "✏️",  onClick: enterEdit },
+            { label: t.common.delete, icon: "🗑",  danger: true, onClick: () => onTrash(log) },
+            { label: t.trash?.changeTime ?? "Change Time", icon: "🕐", disabled: true, onClick: () => {} },
+          ]}
         />
       )}
-    </div>
+    </>
   );
 }
 
-function MealCardBody({ log, t, onPhotoClick, onEdit }) {
+function MealCardBody({ log, t, onPhotoClick, editMode, editGrams, onEditGrams }) {
   const isSingle   = log.items.length === 1;
   const totalGrams = log.items.reduce((s, i) => s + i.grams, 0);
   const photoRefs  = log.photoIds || log.photos || [];
@@ -89,16 +149,35 @@ function MealCardBody({ log, t, onPhotoClick, onEdit }) {
           </div>
         )}
         <div className="log-summary">
-          <span className="log-summary-main">{totalGrams}g</span>
+          {isSingle && editMode ? (
+            <input
+              className="inline-edit-input"
+              type="number" inputMode="decimal" min="0"
+              value={editGrams[0] ?? totalGrams}
+              onChange={e => onEditGrams(0, e.target.value)}
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <span className="log-summary-main">{totalGrams}g</span>
+          )}
         </div>
       </div>
 
       {!isSingle && log.items.map((item, i) => (
-        <div key={i} className={`log-food-row${onEdit ? " log-food-row--tappable" : ""}`}
-          onClick={onEdit ? (e) => { e.stopPropagation(); onEdit(log); } : undefined}>
+        <div key={i} className={`log-food-row${editMode ? " log-food-row--editing" : ""}`}>
           <TypeBadge type={item.foodType} label={t.foodDb.types[item.foodType]} />
           <span className="log-food-name">{item.foodName}</span>
-          <span className="log-food-meta">{item.grams}g · {item.kcal.toFixed(0)}kcal</span>
+          {editMode ? (
+            <input
+              className="inline-edit-input"
+              type="number" inputMode="decimal" min="0"
+              value={editGrams[i] ?? item.grams}
+              onChange={e => onEditGrams(i, e.target.value)}
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <span className="log-food-meta">{item.grams}g · {item.kcal.toFixed(0)}kcal</span>
+          )}
         </div>
       ))}
 
@@ -115,7 +194,7 @@ function MealCardBody({ log, t, onPhotoClick, onEdit }) {
   );
 }
 
-function WaterCardBody({ log, t }) {
+function WaterCardBody({ log, t, editMode, editMl, onEditMl }) {
   const tw = t.water;
   return (
     <>
@@ -130,7 +209,17 @@ function WaterCardBody({ log, t }) {
           </div>
         </div>
         <div className="log-summary">
-          <span className="log-summary-main water-val">{log.ml} ml</span>
+          {editMode ? (
+            <input
+              className="inline-edit-input"
+              type="number" inputMode="decimal" min="0"
+              value={editMl}
+              onChange={e => onEditMl(e.target.value)}
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <span className="log-summary-main water-val">{log.ml} ml</span>
+          )}
         </div>
       </div>
       {log.note && <div className="log-note">💬 {log.note}</div>}
@@ -189,7 +278,7 @@ function WasteCardBody({ log, t, onPhotoClick }) {
 }
 
 // ── HistoryPage ───────────────────────────────────────────────────────────────
-export function HistoryPage({ t, logs, onDelete, onEdit }) {
+export function HistoryPage({ t, logs, onTrash, onPatch }) {
   const [filter, setFilter] = useState("all");
 
   const filtered = filter === "all" ? logs : logs.filter(l => l.kind === filter);
@@ -222,7 +311,7 @@ export function HistoryPage({ t, logs, onDelete, onEdit }) {
             <div key={date}>
               <div className="date-label">{date}</div>
               {grouped[date].map(log => (
-                <LogCard key={log.id} log={log} t={t} onDelete={onDelete} onEdit={onEdit} />
+                <LogCard key={log.id} log={log} t={t} onTrash={onTrash} onPatch={onPatch} />
               ))}
             </div>
           ))

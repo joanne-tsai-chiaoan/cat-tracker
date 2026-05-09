@@ -107,6 +107,15 @@ export const LANGS = {
     },
 
     common: { close: "關閉", edit: "編輯", delete: "刪除", confirm: "確認刪除？", cancel: "取消" },
+
+    trash: {
+      title: "垃圾桶",
+      empty: "沒有已刪除的紀錄",
+      recover: "復原",
+      deletePerm: "永久刪除",
+      changeTime: "修改時間",
+      daysLeft: (n) => `${n} 天後永久刪除`,
+    },
   },
 
   en: {
@@ -216,5 +225,14 @@ export const LANGS = {
     },
 
     common: { close: "Close", edit: "Edit", delete: "Delete", confirm: "Delete this?", cancel: "Cancel" },
+
+    trash: {
+      title: "Trash",
+      empty: "No deleted records",
+      recover: "Recover",
+      deletePerm: "Delete",
+      changeTime: "Change Time",
+      daysLeft: (n) => `${n}d left`,
+    },
   },
 };
