@@ -23,10 +23,10 @@ export function LogCard({ log, t, onDelete, onEdit }) {
   const { armed, trigger } = useConfirmDelete(log.id, onDelete);
   const [lightbox, setLightbox] = useState(null);
   const [sheet,    setSheet]    = useState(false);
-  const longPress = useLongPress(() => setSheet(true));
+  const { pressing, ...longPressHandlers } = useLongPress(() => setSheet(true));
 
   return (
-    <div className={`log-card kind-${log.kind}`} {...longPress}>
+    <div className={`log-card kind-${log.kind}${pressing ? " log-card--pressing" : ""}`} {...longPressHandlers}>
       <button
         className={`card-del${armed ? " card-del--confirm" : ""}`}
         onClick={trigger}
@@ -35,7 +35,7 @@ export function LogCard({ log, t, onDelete, onEdit }) {
         {armed ? "✓" : "×"}
       </button>
 
-      {log.kind === "meal"  && <MealCardBody  log={log} t={t} onPhotoClick={setLightbox} />}
+      {log.kind === "meal"  && <MealCardBody  log={log} t={t} onPhotoClick={setLightbox} onEdit={onEdit} />}
       {log.kind === "water" && <WaterCardBody log={log} t={t} />}
       {log.kind === "waste" && <WasteCardBody log={log} t={t} onPhotoClick={setLightbox} />}
 
@@ -54,7 +54,7 @@ export function LogCard({ log, t, onDelete, onEdit }) {
   );
 }
 
-function MealCardBody({ log, t, onPhotoClick }) {
+function MealCardBody({ log, t, onPhotoClick, onEdit }) {
   const isSingle   = log.items.length === 1;
   const totalGrams = log.items.reduce((s, i) => s + i.grams, 0);
   const photoRefs  = log.photoIds || log.photos || [];
@@ -94,7 +94,8 @@ function MealCardBody({ log, t, onPhotoClick }) {
       </div>
 
       {!isSingle && log.items.map((item, i) => (
-        <div key={i} className="log-food-row">
+        <div key={i} className={`log-food-row${onEdit ? " log-food-row--tappable" : ""}`}
+          onClick={onEdit ? (e) => { e.stopPropagation(); onEdit(log); } : undefined}>
           <TypeBadge type={item.foodType} label={t.foodDb.types[item.foodType]} />
           <span className="log-food-name">{item.foodName}</span>
           <span className="log-food-meta">{item.grams}g · {item.kcal.toFixed(0)}kcal</span>

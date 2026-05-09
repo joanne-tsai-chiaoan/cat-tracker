@@ -141,8 +141,19 @@ export default function App() {
   };
 
   // ── Food mutations ──
-  const addFood    = (food) => setFoods(prev => [{ ...food, id: uid() }, ...prev]);
-  const updateFood = (food) => setFoods(prev => prev.map(f => f.id === food.id ? food : f));
+  const addFood = (food) => setFoods(prev => [{ ...food, id: uid() }, ...prev]);
+  const updateFood = (food) => {
+    setFoods(prev => prev.map(f => f.id === food.id ? food : f));
+    setLogs(prev => prev.map(log => {
+      if (log.kind !== "meal" || !log.items) return log;
+      const next = log.items.map(item =>
+        item.foodId === food.id
+          ? { ...item, foodName: food.name, foodType: food.type, foodSubtype: food.subtype }
+          : item
+      );
+      return next === log.items ? log : { ...log, items: next };
+    }));
+  };
 
   // ── Today's derived data (memoised — only recomputes when logs change) ──
   const { todayLogs, todayKcal, todayProtein, todayWater } = useMemo(() => {
